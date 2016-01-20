@@ -1,0 +1,95 @@
+class WheellZoom:
+ 
+    def __init__(self):
+        self._ax = None
+        
+    def setAx(self, ax = None, x = None, y = None):
+
+        self._ax = ax
+        self._cid = ax.figure.canvas.mpl_connect('scroll_event', self)
+        
+
+    def __call__(self, event):
+
+        if not event.inaxes: return
+        
+        minim , maxim = self._ax.get_ylim()
+        centery = (maxim -minim)/2 + minim
+        height = (maxim - minim) + event.step*(maxim - minim)/15  
+        self._ax.set_ylim([centery - height/2, centery + height/2])
+
+        self._ax.figure.canvas.draw_idle()
+        
+
+class WindowResize:
+ 
+    def __init__(self):
+        self._ax = None
+        self._fig = None
+        
+    def setAx(self, ax = None, fig = None):
+
+        self._ax = ax
+        self._fig = fig
+        
+        self._cid = ax.figure.canvas.mpl_connect('resize_event', self)
+        
+
+    def __call__(self, event):
+        self._fig.tight_layout()
+
+
+class SnaptoCursor:
+  
+    #crosshair snaps to the nearest x,y point
+    # x must be sorted
+
+    def __init__(self):
+        self.ax = None
+        self.x = None
+        self.y = None	
+
+    def setAx(self, ax = None, x = None, y = None):
+        self.x1 = self.y1 = self.x2 = self.y2 = None
+        self.ax = ax
+        self.x = x
+        self.y = y
+        self.ly2 = self.ax.axvline(color='None', linewidth=1.5) 
+        self.ly = self.ax.axvline(color='None', linewidth=1.5)  
+        # text location in axes coords
+        self.txt1 = ax.text( 0.63, 0.92, '', transform=ax.transAxes)
+        self.txt2 = ax.text( 0.63, 0.88, '', transform=ax.transAxes, color='r')
+        self.txt3 = ax.text( 0.63, 0.86, '', transform=ax.transAxes, color='r')
+        self.cid = ax.figure.canvas.mpl_connect('button_release_event', self)
+
+    def __call__(self, event):
+
+        if not event.inaxes: return
+
+        x, y = event.xdata, event.ydata
+        # update the line positions
+
+        if event.button == 3:
+          indx = np.searchsorted(self.x, [x])[0]
+          self.x1 = self.x[indx]
+          self.y1 = self.y[indx] 
+          self.ly.set_xdata(self.x1)
+          self.ly.set_color('k')
+          self.txt1.set_text('x1=%1.3f , y1=%1.1f a.u.'%(self.x1*1000,self.y1))
+
+        if event.button == 2:
+          indx = np.searchsorted(self.x, [x])[0]
+          self.x2 = self.x[indx]
+          self.y2 = self.y[indx] 
+          self.ly2.set_xdata(self.x2)
+          self.ly2.set_color('r')
+          self.txt2.set_text('x2=%1.3f , y2=%1.1f a.u.'%(self.x2*1000,self.y2))
+
+        print ('x=%1.3f ms, y=%1.1f ms'%(x*1000,y))
+        self.ax.figure.canvas.draw_idle()
+
+    def getValues(self):
+        return [self.x1, self.x2, self.y1, self.y2]
+        
+        
+        

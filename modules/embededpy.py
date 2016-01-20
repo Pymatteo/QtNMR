@@ -1,0 +1,107 @@
+from PyQt5 import QtCore, QtGui, QtWidgets, QtSvg
+import numpy as np
+import sys
+import os
+
+class dummyStream:
+        ''' dummyStream behaves like a stream but does nothing. '''
+        def __init__(self): pass
+        def write(self,data): pass
+        def read(self,data): pass
+        def flush(self): pass
+        def close(self): pass
+        # and now redirect all default streams to this dummyStream:
+        
+sys.stdout = dummyStream()
+sys.stderr = dummyStream()
+sys.stdin = dummyStream()
+sys.__stdout__ = dummyStream()
+sys.__stderr__ = dummyStream()
+sys.__stdin__ = dummyStream()
+
+os.environ['QT_API'] = 'pyqt5'
+os.environ['PYZMQ_BACKEND'] = 'cython'
+
+def new_load_qt(api_options):
+    import types
+    import sip
+
+    from PyQt5 import QtCore, QtSvg, QtWidgets, QtGui
+
+    # Alias PyQt-specific functions for PySide compatibility.
+    QtCore.Signal = QtCore.pyqtSignal
+    QtCore.Slot = QtCore.pyqtSlot
+
+    # Join QtGui and QtWidgets for Qt4 compatibility.
+    QtGuiCompat = types.ModuleType('QtGuiCompat')
+    QtGuiCompat.__dict__.update(QtGui.__dict__)
+    QtGuiCompat.__dict__.update(QtWidgets.__dict__)
+
+    return QtCore, QtGuiCompat, QtSvg, 'pyqt5'
+
+from qtconsole import  qt_loaders   
+
+qt_loaders.load_qt = new_load_qt 
+
+from qtconsole.rich_ipython_widget import RichJupyterWidget
+from qtconsole.inprocess import QtInProcessKernelManager
+
+class QIPythonWidget(RichJupyterWidget):
+    """ Convenience class for a live IPython console widget. We can replace the standard banner using the customBanner argument"""
+    def __init__(self, widgetrunning, customBanner=None,*args,**kwargs):
+        super(QIPythonWidget, self).__init__(*args,**kwargs)
+        self.widgetrunning =  widgetrunning
+        if customBanner!=None: self.banner=customBanner
+        self.kernel_manager = kernel_manager = QtInProcessKernelManager()
+        kernel_manager.start_kernel()
+        kernel_manager.kernel.gui = 'qt'
+        self.kernel_client = kernel_client = self._kernel_manager.client()
+        kernel_client.start_channels()
+
+        def stop():
+            kernel_client.stop_channels()
+            kernel_manager.shutdown_kernel()
+            self.widgetrunning.close()          
+        self.exit_requested.connect(stop)
+
+    def pushVariables(self,variableDict):
+        """ Given a dictionary containing name / value pairs, push those variables to the IPython console widget """
+        self.kernel_manager.kernel.shell.push(variableDict)
+    def clearTerminal(self):
+        """ Clears the terminal """
+        self._control.clear()    
+    def printText(self,text):
+        """ Prints some plain text to the console """
+        self._append_plain_text(text)        
+    def executeCommand(self,command):
+        """ Execute a command in the frame of the console widget """
+        self._execute(command,False)
+
+
+class IpythonWidget(QtWidgets.QDialog):
+# Main GUI dialog forIPython Console widget 
+    def __init__(self, parent=None, data=None):
+        super(IpythonWidget, self).__init__(parent)
+        
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
+        self.data = data
+        
+        self.setWindowTitle('QtNMR embedded IPython console')
+        layout = QtWidgets.QVBoxLayout()
+
+        self.ipyConsole = QIPythonWidget(self, customBanner="Welcome to the QtNMR embedded IPython console\n")
+     
+        layout.addWidget(self.ipyConsole) 
+        self.setLayout(layout)       
+        # This allows the variable foo and method print_process_id to be accessed from the ipython console
+        self.ipyConsole.pushVariables({"np":np})
+        
+
+    
+if __name__ == '__main__':
+    app  = QtWidgets.QApplication(sys.argv)
+    self.widget = IpythonWidget()
+    self.widget.show()
+    app.exec_()
+

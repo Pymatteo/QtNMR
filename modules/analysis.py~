@@ -1,0 +1,124 @@
+import modules.utils as utils
+import numpy as np
+import scipy.fftpack as sc 
+import re
+
+
+def baseline(data):
+        # Taking the last eighth of the points seems to give OK (but not
+        # perfect) agreement with the NTNMR DC offset correction.
+        npts = data.shape[-1]
+        bc_offset = np.mean(data[:,int(npts / -8):],
+                    axis=-1, keepdims=True)
+        print(bc_offset)
+        return (data - bc_offset), bc_offset
+
+
+def fourier(data, time):
+        timestep = time[1]-time[0]
+        npts = data.shape[-1]
+        freq = sc.fftfreq(time.size, d=timestep)
+        freq = np.concatenate((freq[freq.size/2:] , freq[:freq.size/2]))
+        fftdata  = sc.fft(data, None, axis=-1)
+        fftdata = np.concatenate((fftdata[:, npts/2:] , fftdata[:,:npts/2]), axis=-1)
+        return (fftdata/np.sqrt(npts)), freq
+
+        
+def invfourier(data): 
+        npts = data.shape[-1]
+        data *= np.sqrt(npts)
+        data = sc.ifft(np.concatenate((data[:, npts/2:] , 
+                                  data[:,:npts/2]), axis=-1))  
+        return data
+
+def phase(data, angle):
+    # angle is in degree change to radians
+    angle = angle / 360 * 2 * np.pi 
+    phased = data * np.exp(-1j * angle) 
+    return phased, angle
+  
+
+def autophase(data, selection, actual2d, indipendent1d=False):
+     if indipendent1d is False:
+        if np.any(selection):
+           selected_range = data[actual2d, selection[0]:selection[1]]  
+        else:
+           selected_range = data[actual2d,:]
+        phased = data * np.exp(-1j * np.angle(np.sum(selected_range)))
+        phi = np.angle(np.sum(selected_range))
+     else:
+        phi = []
+        if np.any(selection):
+           selected_range = data[:,selection[0]:selection[1]]
+        else:
+           selected_range = data
+        for point in range(data.shape[0]): 
+           angle = np.angle(np.sum(selected_range[point,:]))
+           phi.append(angle)            
+           data[point,:] =  data[point,:] * np.exp(-1j * angle)
+        phased = data       
+     return phased, phi
+
+        
+def integrate(data, selection, scans, actual_scans):
+        selected_range = data[:, selection[0]:selection[1]]
+        integrals = np.sum(selected_range, axis=-1)
+        print("real: ", integrals/scans)
+        integrals[-1] = integrals[-1] / actual_scans * scans
+        print("real: ", integrals[-1])
+        magnitude_int = np.sum(np.absolute(selected_range), axis=-1)
+        magnitude_int[-1] = magnitude_int[-1] / actual_scans * scans
+        print("magn: ",magnitude_int[-1])
+        return integrals/scans, magnitude_int/scans
+        
+
+def echoFind(dat, xaxis):
+        # switch to magnitude
+        data = np.absolute(dat) 
+        # biggest value in data (magnitude)
+        peak = np.amax(data) 
+        #find peak position (can be more than one even if unlikely)
+        peak_pos = np.where(data == peak) 
+        # keep just first position
+        peakXY = peak_pos[0][0], peak_pos[1][0]
+        npts = data.shape[-1]
+        t = np.mean(data[peakXY[0],int(npts / -8):])*4 #threshold
+        ii = jj = 0
+        while (data[peakXY[0], peakXY[1]+ii] > t) or ((data[peakXY[0], peakXY[1]-jj] > t) and (peakXY[1]-jj > 8)):
+          if (peakXY[1]-jj > 8):
+            if (data[peakXY[0], peakXY[1]-jj] > t):
+                jj += 1
+          if (data[peakXY[0], peakXY[1]+ii] > t):
+                ii += 1
+        return xaxis[peakXY[1]-jj], xaxis[peakXY[1]+ii] , peakXY[0]
+
+
+def leftshift(data, shifter, check):
+        data = np.roll(data, -shifter, axis=-1)
+        if check is True:
+                data[:,-shifter:] = 0       
+        return data
+
+
+def zerofill(data, ax):
+        data = np.concatenate((data,np.zeros(data.shape)),axis=-1)
+        two = ax*2
+        ax = np.arange(ax.size*2) * ax[1]
+        return data, ax
+
+
+def exp_apodization(data, dwell, LB):
+        npts = data.shape[-1]
+        LBdw = -LB * dwell * np.pi
+        data = data * np.exp(LBdw * np.arange(npts, dtype=float))
+        return data
+        
+
+def sqr_apodization(data, cutter):
+        npts = data.shape[-1]
+        ones = np.ones(cutter)
+        zeros = np.zeros(npts - cutter)
+        data = data * np.concatenate((ones, zeros))
+        return data
+
+      

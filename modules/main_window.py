@@ -1,0 +1,437 @@
+import os
+from PyQt5 import QtCore, QtGui, QtWidgets
+import modules.graphics as graphics
+import modules.dataclass as dataclass
+import modules.utils as utils
+import modules.prefdialog as prefdialog
+import modules.embededpy as embededpy
+import modules.qrc_resources
+
+
+class MainWindow(QtWidgets.QMainWindow):
+
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+        self.myQWidget = graphics.Widgetmain()
+        #self.dirty = False
+        
+        self.dat = dataclass.Data(self.myQWidget, self.loadFile)
+        
+        self.sizeLabel = QtWidgets.QLabel()
+        self.sizeLabel.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+        self.status = self.statusBar()
+        # create a set to resize point in the right corner when true
+        self.status.setSizeGripEnabled(False) 
+        
+        # adds sizelabel to the status bar
+        #status.addPermanentWidget(self.sizeLabel)
+        
+        # shows a default message in the status bar
+        self.status.showMessage("Ready")
+        
+        self.messageView = QtWidgets.QTextBrowser()
+        
+        self.myQWidget.setStatus(self.status)
+        self.mainSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
+        
+        self.mainSplitter.addWidget(self.myQWidget)
+        self.mainSplitter.addWidget(self.messageView)
+        
+        self.setCentralWidget(self.mainSplitter)
+        
+        self.mainSplitter.setStretchFactor(0, 1)
+        self.mainSplitter.setStretchFactor(1, 1)      
+        
+        self.dat.setPrinter(self.messageView) 
+        self.messageView.append('QtNMR - Log:')
+        
+        fileToolbar = self.addToolBar('FileT')
+        plotToolbar = self.addToolBar('PlotT')
+        plotToolbar.setObjectName("PlotToolBar")
+        fileToolbar.setObjectName("FileToolBar")
+        self.fileMenu = self.menuBar().addMenu('&File')
+        analysisMenu = self.menuBar().addMenu('&Analysis')
+        toolsMenu = self.menuBar().addMenu('&Tools')
+        scriptsMenu = self.menuBar().addMenu('&Scripts')
+        optionsMenu = self.menuBar().addMenu('&Options')
+        viewMenu = self.menuBar().addMenu('&View')
+        
+        #self.fileMenu.aboutToShow.connect(self.updateWindowMenu)
+        
+        # ACTIONS DEFINITIONS
+        
+        fileOpenAction = self.createAction("&Open...", self.fileOpen,
+                QtGui.QKeySequence.Open, ":/fileopen.png",
+                "Open an existing tnt file")
+
+        fileQuitAction = self.createAction("&Quit", self.close,
+                QtGui.QKeySequence("Ctrl+Q"), None, "Close the application")
+                
+        fullScreenViewAction = self.createAction("&Full Screen", self.fscreen,
+                QtGui.QKeySequence("F11"), None,
+                "Full Screen") 
+        
+        self.fourierTransformAction = self.createAction("&Fourier Transform", self.fourier,
+                QtGui.QKeySequence("Ctrl+F"), ":/frequency.png",
+                "Fourier Transform", True)  
+
+        fourierTransformAction_nobc = self.createAction("Fourier Transform &no baseline correction", self.fourier_no_bc,
+                None, None, "Fourier Transform no baseline correction", True)     
+
+        baselineAction = self.createAction("&Baseline correction", self.baseline,
+                QtGui.QKeySequence("Ctrl+B"), ":/bc.png",
+                "Baseline correction")  
+
+        exportAction = self.createAction("&Fast export", self.export,
+                QtGui.QKeySequence("Ctrl+E"), None,
+                "Fast export dataset")  
+                
+        inverseTransformAction = self.createAction("&Inverse Fourier Transform", self.inv_fourier,
+                None, ":/timedomain.png",
+                "Inverse Fourier Transform")            
+        
+        rawDataAction = self.createAction("&Back to Raw Data", self.raw_data,
+                None, ":/rawdata.png", "Back to Raw Data") 
+
+        autoPhaseAction = self.createAction("&Auto Phase", self.autophase,
+                QtGui.QKeySequence("Ctrl+P"), ":/autophase.png",
+                "Auto phase adjustment")  
+        
+        integrateAction = self.createAction("In&tegrate selection", self.integrate,
+                QtGui.QKeySequence("Ctrl+I"), ":/integrate.png",
+                "Integrate selection (selected table)")  
+
+        savePlotAction = self.createAction("&Export Plot", self.export_plot,
+                None, ":/exportPlot.png",
+                "Export plot (.eps, .png ...)")  
+
+        configurePlotAction = self.createAction("&Customize Plot", self.axis_conf,
+                None, ":/customAx.png",
+                "Customize actual plot")  
+
+        indipendentPhaseAction = self.createAction("Independent &Autophase", self.phase1d,
+                None, None,
+                "Phase 1D points indipendently", True) 
+
+        saveSelectionAction = self.createAction("&Save Selection", self.save_selection,
+                QtGui.QKeySequence("F5"), None,
+                "Save Selection") 
+
+        loadSelectionAction = self.createAction("&Load Selection", self.load_selection,
+                QtGui.QKeySequence("F6"), None,
+                "Load Selection") 
+                
+        findEchoAction = self.createAction("Find &Echo", self.echo_find,
+                None, None,
+                "Auto find echo")  
+
+        bc_phc_intAction = self.createAction("BC + PC + Integrate", self.bc_phc_int,
+                QtGui.QKeySequence("F2"), ":/phase-int.png",
+                "Baseline Corr. + Autophase + Integrate and save")  
+                
+        find_phc_intAction = self.createAction("FE + PC + Integrate", self.find_phc_int,
+                QtGui.QKeySequence("F1"), ":/find-int.png",
+                "Find Echo + Baseline Corr. + Autophase + Integrate and save")   
+
+        leftshiftAction = self.createAction("Left shift", self.leftshift,
+                QtGui.QKeySequence("F7"), None,
+                "Left shift")   
+      
+        rollshiftAction = self.createAction("Left shift - Roll", self.rollshift,
+                QtGui.QKeySequence("Ctrl+R"), None,
+                "Left shift - Data rolled to back")
+
+        zerofillAction = self.createAction("Zero Fill", self.zerofill,
+                QtGui.QKeySequence("F8"), None,
+                "Zero Fill - Double data point")
+
+        expApodAction = self.createAction("Exp. Apodization", self.exp_apodization,
+                QtGui.QKeySequence("F9"), None,
+                "Exponential Apodization")
+        
+        sqrApodAction = self.createAction("Square Apodization", self.sqr_apodization,
+                QtGui.QKeySequence("Ctrl+1"), None,
+                "Square Apodization")        
+                
+        nextFileAction = self.createAction("&Next File", self.nextfile,
+                QtGui.QKeySequence("F4"), ":/nextfile.png",
+                "Load Next File")   
+                
+        prevFileAction = self.createAction("&Previous File", self.prevfile,
+                QtGui.QKeySequence("F3"), ":/prevfile.png",
+                "Load Previous File")  
+                
+        runScriptAction = self.createAction("&Run Script", self.load_script,
+                QtGui.QKeySequence("F10"), None,
+                "Run Script") 
+                
+        prefAction = self.createAction("&Preferences...", self.pref,
+                None, None,
+                "Preferences")
+        
+        embedpyAction = self.createAction("&Python console", self.embedpy,
+                QtGui.QKeySequence("Ctrl+T"), None,
+                "Embeded IPython terminal")                                     
+        
+
+        #import actions to windows   
+        self.addAction(fileOpenAction)
+        self.addAction(exportAction)
+        self.addAction(fileQuitAction)
+        self.addAction(fullScreenViewAction)
+        self.addAction(savePlotAction)
+        self.addAction(configurePlotAction)
+        self.addAction(self.fourierTransformAction)
+        self.addAction(fourierTransformAction_nobc)
+        self.addAction(inverseTransformAction)
+        self.addAction(rawDataAction)
+        self.addAction(baselineAction)
+        self.addAction(autoPhaseAction)
+        self.addAction(integrateAction)
+        self.addAction(bc_phc_intAction)
+        self.addAction(find_phc_intAction)
+        self.addAction(saveSelectionAction)
+        self.addAction(loadSelectionAction)
+        self.addAction(leftshiftAction)
+        self.addAction(rollshiftAction)
+        self.addAction(zerofillAction)
+        self.addAction(expApodAction)
+        self.addAction(sqrApodAction)
+        self.addAction(nextFileAction)
+        self.addAction(prevFileAction)
+        self.addAction(runScriptAction)
+        self.addAction(prefAction)
+        self.addAction(embedpyAction)
+        
+        
+        #import actions to widgets   
+        self.fileMenu.addAction(fileOpenAction)
+        self.fileMenu.addAction(nextFileAction)
+        self.fileMenu.addAction(prevFileAction)
+        self.fileMenu.addAction(exportAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(fileQuitAction)
+
+        viewMenu.addAction(fullScreenViewAction)
+        viewMenu.addAction(savePlotAction)
+        viewMenu.addAction(configurePlotAction)
+
+        analysisMenu.addAction(self.fourierTransformAction)
+        analysisMenu.addAction(fourierTransformAction_nobc)
+        analysisMenu.addAction(inverseTransformAction)
+        analysisMenu.addAction(rawDataAction)
+        analysisMenu.addAction(baselineAction)
+        analysisMenu.addAction(autoPhaseAction)
+        analysisMenu.addAction(expApodAction)
+        analysisMenu.addAction(sqrApodAction)
+        analysisMenu.addAction(integrateAction)
+        analysisMenu.addAction(bc_phc_intAction)
+        analysisMenu.addAction(find_phc_intAction)
+
+        toolsMenu.addAction(indipendentPhaseAction)
+        toolsMenu.addAction(findEchoAction)
+        toolsMenu.addAction(leftshiftAction)
+        toolsMenu.addAction(rollshiftAction)   
+        toolsMenu.addAction(zerofillAction)
+        toolsMenu.addSeparator()
+        toolsMenu.addAction(saveSelectionAction)
+        toolsMenu.addAction(loadSelectionAction)
+        
+        optionsMenu.addAction(prefAction)
+        
+        scriptsMenu.addAction(runScriptAction)
+        scriptsMenu.addAction(embedpyAction)
+
+        fileToolbar.addAction(fileOpenAction)
+        fileToolbar.addAction(prevFileAction)
+        fileToolbar.addAction(nextFileAction)
+        fileToolbar.addAction(self.fourierTransformAction)
+        fileToolbar.addAction(inverseTransformAction)
+        fileToolbar.addAction(rawDataAction)
+        fileToolbar.addAction(baselineAction)
+        fileToolbar.addAction(autoPhaseAction)
+        fileToolbar.addAction(integrateAction)
+        fileToolbar.addAction(bc_phc_intAction)
+        fileToolbar.addAction(find_phc_intAction)
+
+        plotToolbar.addAction(savePlotAction)
+        plotToolbar.addAction(configurePlotAction)
+        
+        # spinboxes and other stuff
+        self.pointSpinBox = QtWidgets.QSpinBox()
+        self.pointSpinBox.setWrapping(True)
+        self.pointSpinBox.setRange(1, 1)
+        self.pointSpinBox.setValue(1)
+        self.pointSpinBox.setToolTip('Select 2D point')
+        self.pointSpinBox.setStatusTip(self.pointSpinBox.toolTip())
+        #self.pointSpinBox.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.pointSpinBox.valueChanged.connect(self.select2D)
+        fileToolbar.addWidget(self.pointSpinBox)
+
+        self.delayComboBox = QtWidgets.QComboBox()
+        self.delayComboBox.setToolTip('Select delay table')
+        self.delayComboBox.setStatusTip(self.delayComboBox.toolTip())
+        #self.delayComboBox.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.delayComboBox.currentIndexChanged.connect(self.box_delay_table)
+        fileToolbar.addWidget(self.delayComboBox)
+    
+    def fourier(self):
+        self.dat.fourier(True)
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+        if not self.dat.getFilename():
+           self.fourierTransformAction.setChecked(False)
+
+    def fourier_no_bc(self):
+        self.dat.fourier(False)
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+        if not self.dat.getFilename():
+           self.fourierTransformAction.setChecked(False)
+
+    def baseline(self):
+        self.dat.bl_correction()
+
+    def export(self):
+        self.dat.export()
+        
+    def inv_fourier(self):
+        self.dat.inv_fourier() 
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+                
+    def raw_data(self): 
+        self.dat.raw_data()
+        self.pointSpinBox.setValue(1)
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+
+    def autophase(self):
+        self.dat.auto_phase()
+
+    def set_1d_indip(self):
+        self.dat.auto_phase()
+        
+    def integrate(self):   
+        self.dat.integrate()
+
+    def export_plot(self):
+        self.myQWidget.save_plot()
+
+    def axis_conf(self):
+        self.myQWidget.axis_configure()
+
+    def phase1d(self):
+        self.dat.setPhasingType()
+
+    def save_selection(self):
+        self.dat.setSaved()
+
+    def load_selection(self):
+        self.dat.loadSaved()
+        
+    def echo_find(self):
+        self.dat.echo_find()
+
+    def bc_phc_int(self):
+        self.dat.bc_phcorr_int()
+        
+    def find_phc_int(self):
+        self.dat.find_phcorr_int()
+
+    def leftshift(self):
+        self.dat.left_shift(True)
+
+    def rollshift(self):
+        self.dat.left_shift(False)
+
+    def zerofill(self):
+        self.dat.zerofill()
+
+    def exp_apodization(self):
+        self.dat.exp_apodization()
+        
+    def sqr_apodization(self):
+        self.dat.sqr_apodization() 
+        
+    def nextfile(self):
+        if self.dat.getFilename() is not None :
+            self.loadFile(utils.fileroll(self.dat.getFilename()[0],+1))
+            
+    def prevfile(self):
+        if self.dat.getFilename() is not None :
+            self.loadFile(utils.fileroll(self.dat.getFilename()[0],-1))       
+            
+    def load_script(self):
+        self.dat.load_script() 
+        
+    def pref(self):
+        dialog = prefdialog.prefDlg(parent=self, data=self.dat)
+        dialog.show()
+        if dialog.exec_():
+           print(prefdialog.result())
+           
+    def embedpy(self):       
+        dialog = embededpy.IpythonWidget(parent=self, data=self.dat)
+        dialog.show()
+        #if dialog.exec_():
+           #print(prefdialog.result())
+    
+    @QtCore.pyqtSlot(int)
+    def select2D(self,delaypoint):
+        self.dat.select2d(delaypoint)
+
+    @QtCore.pyqtSlot(int)
+    def box_delay_table(self,delaypoint):
+        self.dat.setActualDelay(self.delayComboBox.currentText())
+
+    #open file
+    def fileOpen(self):
+        #if not self.okToContinue():
+        #    return
+        dir = (os.path.dirname(self.dat.getFilename()[0])
+               if self.dat.getFilename() is not None else ".")
+        fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                "QtNMR - Open", dir, '*.tnt')              
+        if fname[0] :
+            self.loadFile(fname) 
+          
+            
+    def loadFile(self, loadfname=None):  
+        self.dat.loadFile(loadfname)
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+        self.setWindowTitle('QtNMR - ' + self.dat.getFilename()[0].split('/')[-1])
+        # fill 2d points spinbox
+        self.pointSpinBox.setValue(1)
+        self.pointSpinBox.setRange(1, self.dat.get2dpoints())
+        # fill delay combobox
+        self.delayComboBox.clear()
+        delays = sorted(self.dat.getDelayTables())
+        self.delayComboBox.addItems(delays)
+        
+        
+
+    #full screen
+    def fscreen(self):
+        if self.windowState() & QtCore.Qt.WindowFullScreen:
+            self.showNormal()
+        else:
+            self.showFullScreen()
+            
+    #createaction function see above    
+    def createAction(self, text, slot=None, shortcut=None, icon=None,
+                     tip=None, checkable=False):
+        action = QtWidgets.QAction(text, self)
+        if icon is not None:
+            action.setIcon(QtGui.QIcon(icon))
+        if shortcut is not None:
+            action.setShortcut(shortcut)
+            #action.short = QtWidgets.QShortcut(shortcut, self)
+            #action.short.activated.connect(slot)
+        if tip is not None:
+            action.setToolTip(tip)
+            action.setStatusTip(tip)
+        if slot is not None:
+            action.triggered.connect(slot) 
+        if checkable:
+            action.setCheckable(True)
+        return action   
+    
+    
+            

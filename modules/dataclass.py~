@@ -1,0 +1,367 @@
+#import modules.graphics as graphics
+import modules.analysis as analysis
+import modules.utils as utils
+import modules.tntimport as tntimport
+import numpy as np
+
+
+class Data:
+
+# variables initialization
+
+    def __init__(self, qwidget, loader):
+        # loader is the main function loadfile method to
+        # make it available for scripts it is an hack
+        self.__filename = None
+        self.__data = None       
+        self.__raw_time = None      
+        self.__acq_points = np.zeros(2, dtype=np.int32)
+        self.__actual2d = None
+        self.__qwidget = qwidget
+        self.loader = loader
+        # points to be plotted, processed data: dataplt
+        self.__dataplt = None
+        self.__ft_flag = False
+        self.__time = None 
+        self.__freq = None
+        self.__axis = None
+        self.__scans = None
+        self.__actual_scans = None
+        self.__delay_tables = None
+        self.__actual_delay = None
+        self.__delay_tables_si = None
+        # zoom selection status
+        self.__selection_active = np.zeros(2, dtype=np.float64)
+        self.__selection_setted = np.zeros(2, dtype=np.float64)
+        self.__zoom = False
+        self.__zoomcleaning = False #-> correct plot behaviour
+        self.__1d_indip_phase = False
+        self.__saved_selection = None
+        self.__shifter = None
+
+################ GETTERS and SETTERS ############### 
+
+    def setPrinter(self, printer):
+        self.printer = printer
+
+    def getDataRaw(self): 
+        return np.copy(self.__data)
+
+    def getData(self): 
+        return np.copy(self.__dataplt)
+
+    def getFilename(self): 
+        return self.__filename
+
+    def get2dpoints(self): 
+        return self.__acq_points[1]
+
+    def get1dpoints(self): 
+        return self.__acq_points[0]
+
+    def getTimeRaw(self): 
+        return np.copy(self.__raw_time)
+
+    def getTime(self): 
+        return np.copy(self.__time)
+        
+    def getXaxis(self): 
+        return np.copy(self.__time)  
+
+    def getFtFlag(self):
+        return self.__ft_flag
+
+    def getSelectionRange(self, xaxis, selectiontype):
+        indx = np.zeros(2, dtype=np.float32)
+        indx[0] = np.searchsorted(xaxis, [selectiontype[0]])[0]
+        indx[1] = np.searchsorted(xaxis, [selectiontype[1]])[0]
+        return indx
+
+    def getSelection(self):
+        return self.__selection_setted 
+        
+    def setSelection(self, x1, x2):
+        self.__selection_setted = x1, x2
+        self.printer.append('setted selection: '+str(self.__selection_setted))
+        print('setted selection:',self.__selection_setted) 
+
+    def setZoom(self, status):
+        self.__zoom = status
+
+    def getZoomStatus(self):
+        if self.__zoomcleaning:
+           return False
+        else: 
+           return np.any(self.__selection_active)
+
+    def getDelayTables(self):
+        return self.__delay_tables
+
+    def setPhasingType(self):
+        if self.__1d_indip_phase is False:
+                self.__1d_indip_phase = True
+        else: 
+                self.__1d_indip_phase = False
+
+    def setSaved(self):
+        self.__saved_selection = np.copy(self.__selection_setted)
+        self.printer.append('Selection saved')
+
+    def loadSaved(self):
+        if self.__saved_selection is not None:
+           self.setSelection(self.__saved_selection[0], self.__saved_selection[1])
+           self.plotstd()
+
+    def setActualDelay(self,actualdelay):
+        if actualdelay:
+          self.__actual_delay = actualdelay
+          self.printer.append('Selected delay table:\n'+'Name: '+actualdelay + '  Size: '+\
+          str(self.__delay_tables_si[actualdelay].size))
+          self.printer.append(str(self.__delay_tables[actualdelay]))
+          if (self.__acq_points[1] != self.__delay_tables_si[actualdelay].size):
+                self.printer.append('WARNING: table size does not match 2D points')
+          print(self.__delay_tables_si[actualdelay])
+     
+    def select2d(self, delaypoint):
+        self.__actual2d = delaypoint -1 
+        self.plotstd()
+
+    def setShifter(self, shifter):
+        self.__shifter = np.searchsorted(self.__axis, [shifter])[0]
+        self.printer.append('Shifter in '+str(self.__shifter))
+
+############### END GETTERS ############### 
+###############  PLOTTERS #################
+        
+    def resetZoom(self, check):
+        self.__selection_active = np.zeros(2, dtype=np.float64)
+        self.__selection_setted = np.zeros(2, dtype=np.float64)
+        self.__zoom = False
+        self.__zoomcleaning = False
+        if check is True:
+           self.plotstd()
+
+    def plot(self, data, xaxis):
+        ax = xaxis
+        plotdata = data
+        if self.__zoomcleaning:
+            self.__zoomcleaning = False
+            self.setSelection(0, 0)
+        if self.__zoom:
+            self.__selection_active = np.copy(self.__selection_setted)
+            self.__selection_setted = np.zeros(2, dtype=np.float64)
+            self.__zoom = False
+            self.__zoomcleaning = True
+        # np.any() returns True is there is a non zero element
+        if np.any(self.__selection_active):
+            indx = self.getSelectionRange(xaxis, self.__selection_active)
+            ax = xaxis[indx[0]:indx[1]]
+            plotdata = data[indx[0]:indx[1]]
+            self.printer.append('active selection: '+str(self.__selection_active))
+            print('activeselection', self.__selection_active)
+
+        self.__qwidget.plot(ax, plotdata.real, plotdata.imag, 
+                       np.absolute(plotdata), ax[-1], ax[0], self)
+        
+
+    def plotstd(self):
+        self.plot(self.__dataplt[self.__actual2d,:], self.__axis)
+        
+############### END PLOTTERS ###############     
+
+    def loadFile(self, loadfname=None): 
+        self.__freq = None             
+        self.__ft_flag = False
+        self.resetZoom(False)
+        self.__delay_tables = None
+        self.__delay_tables_si = None
+        self.__actual_delay = None
+        self.__filename = loadfname
+
+        self.__acq_points,self.__data,self.__time,self.__delay_tables, \
+        self.__delay_tables_si, self.__scans, self.__actual_scans = tntimport.tntopen(loadfname)   
+        
+        self.__dataplt = np.copy(self.__data)
+        self.__raw_time = np.copy(self.__time)
+        self.__axis = self.__time
+        self.__actual2d = 0
+
+        print(self.__acq_points)
+        self.printer.append('Acq. points 1D: '+str(self.__acq_points[0]))
+        self.printer.append('Acq. points 2D: '+str(self.__acq_points[1]))
+        print(self.__scans)
+        self.printer.append('Scans: '+str(self.__scans))
+        self.printer.append('Actual Scans: '+str(self.__actual_scans))
+        #print(self.__data)
+        #print(self.__delay_tables)
+        #print(self.__delay_tables_si)
+        self.printer.append('File name: ' + self.__filename[0])
+        self.plotstd()
+
+   
+    def export(self): 
+        if ( self.__filename ):
+           utils.export(self.__actual2d,self.__dataplt,self.__axis,self.__ft_flag,self.__filename)
+           self.printer.append('Exported')
+
+   
+    def fourier(self,bl):   
+      if ( self.__filename and self.__ft_flag is False) :
+        self.resetZoom(False)
+        if ( bl is True ) : self.bl_correction(False)  
+        self.__dataplt, self.__freq = analysis.fourier(self.__dataplt, self.__time)
+        self.__ft_flag = True
+        self.__axis = self.__freq
+        self.plotstd()
+
+          
+    def inv_fourier(self):
+       if ( self.__filename and self.__ft_flag is True ) :
+        self.resetZoom(False)
+        self.__axis = self.__time                      
+        self.__freq = None             
+        self.__ft_flag = False
+        self.__dataplt = analysis.invfourier(self.__dataplt)
+        self.plotstd()
+
+    
+    def raw_data(self): 
+      if self.__filename :
+        self.__freq = None             
+        self.__ft_flag = False
+        self.resetZoom(False) 
+        self.__dataplt = np.copy(self.__data)
+        self.__time = np.copy(self.__raw_time) 
+        self.__axis = self.__time
+        self.__actual2d = 0
+        self.plotstd()
+        self.printer.append('Back to raw data')
+
+
+    def bl_correction(self, graphics=True):
+      if self.__filename :
+        self.__dataplt, baseline = analysis.baseline(self.__dataplt)
+        if ( graphics is True ):
+          self.plotstd()
+        self.printer.append('Baseline correction: '+str(baseline))
+
+
+    def phase(self, angle):
+        if self.__filename :
+                self.__dataplt, phase = analysis.phase(self.__dataplt, angle)
+                self.printer.append('Phase rotated (radians): '+str(phase))
+                self.plotstd()
+
+
+    def auto_phase(self, point2d = None):
+      if self.__filename :
+        phaserange = self.getSelectionRange(self.__axis, self.__selection_setted)
+        if point2d is None:
+                point2d = self.__actual2d
+        self.__dataplt, phase = analysis.autophase(self.__dataplt, phaserange, 
+                                point2d, self.__1d_indip_phase)
+        self.printer.append('Phase correction (radians): '+str(phase))
+        self.plotstd()
+
+
+    def integrate(self):
+      if self.__filename :
+       if np.any(self.__selection_setted):
+         int_range = self.getSelectionRange(self.__axis, self.__selection_setted)
+         integrals, magnitude_integral = analysis.integrate(self.__dataplt, int_range, self.__scans)
+         print(integrals)
+         table = self.__delay_tables_si[self.__actual_delay]
+         if table.size != integrals.size:
+            table = range(1,integrals.size+1)
+            print('WARNING: table size not match')
+            self.printer.append('WARNING: table size not match using integers')
+         int_list, outcome = utils.export_ints(integrals, magnitude_integral, table, self.__filename)
+         self.printer.append('Integrals:\n' + int_list)
+         self.printer.append(outcome)
+       else:
+         print('WARNING: no selection, aborting integration') 
+         self.printer.append('WARNING no selection, aborting integration')
+         
+         
+    def echo_find(self, check = False):
+       if self.__filename and not self.__ft_flag:
+        self.bl_correction(False)
+        peak_limits = analysis.echoFind(self.__dataplt, self.__axis)
+        self.setSelection(peak_limits[0], peak_limits[1])
+        if check is True:
+           return peak_limits[2] # return 2d point maximmum
+        self.plotstd()
+       elif self.__ft_flag:
+        self.printer.append('This function only works in time domain!!!') 
+
+    def bc_phcorr_int(self):
+       if self.__filename and np.any(self.__selection_setted) :
+        self.bl_correction(False)
+        self.auto_phase()
+        self.integrate()
+       else:
+        self.printer.append('WARNING no selection, aborting')
+
+    def find_phcorr_int(self):
+       if self.__filename and not self.__ft_flag:
+        point2d = self.echo_find(True) #find and get 2d point maximum
+        self.auto_phase(point2d)
+        self.integrate()
+       elif self.__ft_flag:
+        self.printer.append('This function only works in time domain!!!')
+       else:
+        self.printer.append('WARNING no selection, aborting')
+
+    def left_shift(self, check):
+       if self.__filename and self.__shifter and (self.__ft_flag is False):
+         if check is True:
+                self.bl_correction(False)
+         self.__dataplt = analysis.leftshift(self.__dataplt, self.__shifter,check) 
+         self.printer.append('Shifted: '+ str(self.__shifter))
+         self.plotstd()
+
+    def zerofill(self):
+       if self.__filename and (self.__ft_flag is False):
+          self.__dataplt, self.__time = analysis.zerofill(self.__dataplt, self.__time) 
+          self.__axis = self.__time
+          self.plotstd()
+
+    def exp_apodization(self):
+       if self.__filename and (self.__ft_flag is False):
+          # remember time[1] is equal to the dwell time
+          LB = 100
+          self.__dataplt = analysis.exp_apodization(self.__dataplt, self.__time[1],LB) 
+          self.plotstd()
+
+    def sqr_apodization(self):
+       if self.__filename and self.__shifter and (self.__ft_flag is False):
+          self.bl_correction(False)
+          self.__dataplt = analysis.sqr_apodization(self.__dataplt, self.__shifter) 
+          self.plotstd()
+
+    def load_script(self):
+       if self.__filename:
+          with open("script.py") as f:
+            code = compile(f.read(), "script.py", 'exec')
+            exec(code)
+          
+          
+
+# TO DO:
+# export and baseline correction actions DONE
+# 2D support DONE
+# selection (zoom) DONE
+# delay tables DONE 
+# phase correction DONE (auto)
+# auto phase DONE
+# integrals DONE
+# logging improved DONE
+# autopeak finding (and integration) DONE
+# auto t1 in folder
+# exp apodization DONE
+# left shift DONE
+# zero fill DONE
+# export save LATER
+
+
+

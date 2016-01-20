@@ -1,0 +1,18 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+<file alias="fileopen.png">../imm/fileopen.png</file>
+<file alias="frequency.png">../imm/frequency.png</file>
+<file alias="bc.png">../imm/bc.png</file>
+<file alias="timedomain.png">../imm/timedomain.png</file>
+<file alias="rawdata.png">../imm/rawdata.png</file>
+<file alias="autophase.png">../imm/autophase.png</file>
+<file alias="integrate.png">../imm/integrate.png</file>
+<file alias="exportPlot.png">../imm/exportPlot.png</file>
+<file alias="customAx.png">../imm/customAx.png</file>
+<file alias="phase-int.png">../imm/phase-int.png</file>
+<file alias="find-int.png">../imm/find-int.png</file>
+<file alias="nextfile.png">../imm/nextfile.png</file>
+<file alias="prevfile.png">../imm/prevfile.png</file>
+<file alias="icon.png">../imm/icon.png</file>
+</qresource>
+</RCC>

@@ -1,0 +1,201 @@
+import os
+#from PyQt5.Qt import *
+from PyQt5 import QtCore, QtGui, QtWidgets
+import modules.graphics as graphics
+import modules.dataclass as dataclass
+
+
+class MainWindow(QtWidgets.QMainWindow):
+
+    def __init__(self, parent=None):
+        super(MainWindow, self).__init__(parent)
+        self.myQWidget = graphics.Widgetmain()
+        self.setCentralWidget(self.myQWidget)
+        #self.dirty = False
+        
+        self.dat = dataclass.Data(self.myQWidget)
+        
+        self.sizeLabel = QtWidgets.QLabel()
+        self.sizeLabel.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
+        self.status = self.statusBar()
+        # create a set to resize point in the right corner when true
+        self.status.setSizeGripEnabled(False) 
+        
+        # adds sizelabel to the status bar
+        #status.addPermanentWidget(self.sizeLabel)
+        
+        # shows a default message in the status bar
+        self.status.showMessage("Ready")
+
+        self.myQWidget.setStatus(self.status)
+       
+        
+        fileToolbar = self.addToolBar('FileT')
+        plotToolbar = self.addToolBar('PlotT')
+        plotToolbar.setObjectName("PlotToolBar")
+        fileToolbar.setObjectName("FileToolBar")
+        fileMenu = self.menuBar().addMenu('File')
+        viewMenu = self.menuBar().addMenu('View')
+        analysisMenu = self.menuBar().addMenu('Analysis')
+        
+        #fileOpenAction = QtWidgets.QAction(QtGui.QIcon("fileopen.png"), "Open", self)
+        #fileOpenAction.triggered.connect(self.fileOpen) 
+        #fileOpenAction.setShortcut(QtGui.QKeySequence.Open)
+        
+        fileOpenAction = self.createAction("Open...", self.fileOpen,
+                QtGui.QKeySequence.Open, "imm/fileopen.png",
+                "Open an existing tnt file")
+
+        fileQuitAction = self.createAction("&Quit", self.close,
+                QtGui.QKeySequence("Ctrl+Q"), None, "Close the application")
+                
+        fullScreenViewAction = self.createAction("Full Screen", self.fscreen,
+                QtGui.QKeySequence("F11"), None,
+                "Full Screen") 
+        
+        self.fourierTransformAction = self.createAction("Fourier Transform", self.fourier,
+                QtGui.QKeySequence("Ctrl+F"), "imm/frequency.png",
+                "Fourier Transform", True)  
+
+        fourierTransformAction_nobc = self.createAction("Fourier Transform no baseline correction", self.fourier_no_bc,
+                None, None,
+                "Fourier Transform no baseline correction", True)     
+
+        baselineAction = self.createAction("Baseline correction", self.baseline,
+                QtGui.QKeySequence("Ctrl+B"), None,
+                "Baseline correction")  
+
+        exportAction = self.createAction("Fast export", self.export,
+                QtGui.QKeySequence("Ctrl+E"), None,
+                "Fast export dataset")  
+                
+        inverseTransformAction = self.createAction("Inverse Fourier Transform", self.inv_fourier,
+                QtGui.QKeySequence("Ctrl+I"), "imm/timedomain.png",
+                "Inverse Fourier Transform")            
+        
+        rawDataAction = self.createAction("Back to Raw Data", self.raw_data,
+                None, "imm/rawdata.png", "Back to Raw Data") 
+
+        savePlotAction = self.createAction("Export Plot", self.export_plot,
+                None, "imm/exportPlot.png",
+                "Export plot (.eps, .png ...)")  
+
+        configurePlotAction = self.createAction("Customize Plot", self.axis_conf,
+                None, "imm/customAx.png",
+                "Customize actual plot")  
+
+        #import actions to widgets    
+        fileMenu.addAction(fileOpenAction)
+        fileMenu.addAction(exportAction)
+        fileMenu.addAction(fileQuitAction)
+        viewMenu.addAction(fullScreenViewAction)
+        viewMenu.addAction(savePlotAction)
+        viewMenu.addAction(configurePlotAction)
+        analysisMenu.addAction(self.fourierTransformAction)
+        analysisMenu.addAction(fourierTransformAction_nobc)
+        analysisMenu.addAction(inverseTransformAction)
+        analysisMenu.addAction(rawDataAction)
+        analysisMenu.addAction(baselineAction)
+        fileToolbar.addAction(fileOpenAction)
+        fileToolbar.addAction(self.fourierTransformAction)
+        fileToolbar.addAction(inverseTransformAction)
+        fileToolbar.addAction(rawDataAction)
+        plotToolbar.addAction(savePlotAction)
+        plotToolbar.addAction(configurePlotAction)
+        
+        # spinboxes and other stuff
+        self.pointSpinBox = QtWidgets.QSpinBox()
+        self.pointSpinBox.setRange(1, 1)
+        self.pointSpinBox.setValue(1)
+        self.pointSpinBox.setToolTip('Select 2D point')
+        self.pointSpinBox.setStatusTip(self.pointSpinBox.toolTip())
+        self.pointSpinBox.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.pointSpinBox.valueChanged.connect(self.select2D)
+        fileToolbar.addWidget(self.pointSpinBox)
+        
+    
+    def fourier(self):
+        self.dat.fourier(True)
+        self.fourierTransformAction.setChecked(True)
+        if not self.dat.getFilename():
+           self.fourierTransformAction.setChecked(False)
+
+    def fourier_no_bc(self):
+        self.dat.fourier(False)
+        self.fourierTransformAction.setChecked(True)
+        if not self.dat.getFilename():
+           self.fourierTransformAction.setChecked(False)
+
+    def baseline(self):
+        self.dat.bl_correction()
+
+    def export(self):
+        self.dat.export()
+        
+    def inv_fourier(self):
+        self.dat.inv_fourier() 
+        self.fourierTransformAction.setChecked(False)
+             
+    
+    def raw_data(self): 
+        self.dat.raw_data()
+        self.pointSpinBox.setValue(1)
+        self.fourierTransformAction.setChecked(False)
+
+    def export_plot(self):
+        self.myQWidget.save_plot()
+
+    def axis_conf(self):
+        self.myQWidget.axis_configure()
+    
+    @QtCore.pyqtSlot(int)
+    def select2D(self,delaypoint):
+        self.dat.select2d(delaypoint)
+
+    #open file
+    def fileOpen(self):
+        #if not self.okToContinue():
+        #    return
+        dir = (os.path.dirname(self.dat.getFilename()[0])
+               if self.dat.getFilename() is not None else ".")
+        fname = QtWidgets.QFileDialog.getOpenFileName(self,
+                "QtNMR - Open", dir, '*.tnt')              
+        if fname[0] :
+            self.loadFile(fname) 
+          
+            
+    def loadFile(self, loadfname=None):  
+        self.dat.loadFile(loadfname)
+        self.setWindowTitle('QtNMR - ' + self.dat.getFilename()[0].split('/')[-1])
+        self.pointSpinBox.setValue(1)
+        self.pointSpinBox.setRange(1, self.dat.get2dpoints())
+        
+
+    #full screen
+    def fscreen(self):
+        if self.windowState() & QtCore.Qt.WindowFullScreen:
+            self.showNormal()
+        else:
+            self.showFullScreen()
+            
+    #createaction function see above    
+    def createAction(self, text, slot=None, shortcut=None, icon=None,
+                     tip=None, checkable=False):
+        action = QtWidgets.QAction(text, self)
+        if icon is not None:
+            action.setIcon(QtGui.QIcon(icon))
+        if shortcut is not None:
+            action.setShortcut(shortcut)
+            #action.short = QtWidgets.QShortcut(shortcut, self)
+            #action.short.activated.connect(slot)
+        if tip is not None:
+            action.setToolTip(tip)
+            action.setStatusTip(tip)
+        if slot is not None:
+            action.triggered.connect(slot) 
+        if checkable:
+            action.setCheckable(True)
+        return action   
+    
+    
+            

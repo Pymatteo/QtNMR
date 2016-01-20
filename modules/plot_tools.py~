@@ -1,0 +1,186 @@
+import numpy as np
+from matplotlib.widgets import SpanSelector
+import matplotlib.patches as mpatches
+
+
+class Selection:
+    def __init__(self):
+        self.__rect = None
+        
+    def setAx(self, dataplot, data):
+        self.__rect = None
+        self.__setrange = data.setSelection
+        self.__selrange = data.getSelection
+        self.__data = data
+        self.__dataplot = dataplot      
+        if np.any(self.__selrange()):
+          #if self.__rect: self.__rect.remove()
+          self.__rect = mpatches.Rectangle((self.__selrange()[0], dataplot.get_ylim()[0]), 
+                        self.__selrange()[1]-self.__selrange()[0], dataplot.get_ylim()[1]-dataplot.get_ylim()[0], 
+                        color='black')
+          self.__rect.set_alpha(0.2)
+          self.__dataplot.add_patch(self.__rect)
+          self.__cidpress = self.__rect.figure.canvas.mpl_connect(
+            'button_press_event', self)
+            
+    def removeSelection(self): 
+         if np.any(self.__selrange()):
+          self.__rect.remove()
+
+    def __call__(self, event):
+       if self.__rect:
+         if event.inaxes != self.__rect.axes: return
+         contains, attrd = self.__rect.contains(event)
+         if not contains: 
+            self.__setrange(0, 0)
+            self.__data.plotstd()
+            if event.dblclick: self.__data.plotstd()
+            return
+         if event.dblclick:
+            print('event contains', self.__rect.xy)
+            self.__data.setZoom(True)
+            self.__data.plotstd()
+
+        
+class Select:
+    def __init__(self):
+        self.__span = None
+        self.__rect = None
+        self.__dataplot = None
+
+    def setSelection(self, x1, x2):
+        self.__data.setSelection(x1, x2)
+        self.__data.plotstd()
+
+    def setAx(self, dataplot, hxlimit, lxlimit, xaxis, data, rect): 
+        self.__data = data
+        self.__dataplot = dataplot
+        self.__rect = rect
+        self.__span = SpanSelector(dataplot, self.setSelection, 'horizontal', 
+                    minspan=(hxlimit-lxlimit)/xaxis, useblit=True,
+                    rectprops=dict(alpha=0.2, facecolor='black'),onmove_callback=None, span_stays=False)
+
+
+class WindowResize: 
+    def __init__(self):
+        self.__ax = None
+        self.__fig = None
+        
+    def setAx(self, ax = None, fig = None):
+        self.__ax = ax
+        self.__fig = fig
+        self.__cid = ax.figure.canvas.mpl_connect('resize_event', self)
+        
+    def __call__(self, event):
+        self.__fig.tight_layout()
+        
+
+
+class WheellZoom:
+ 
+    def __init__(self):
+        self.__ax = None
+        
+    def setAx(self, ax, selction, data):
+        self.__data = data
+        self.__selction = selction
+        self.__ax = ax
+        self.__cid = ax.figure.canvas.mpl_connect('scroll_event', self)
+        
+
+    def __call__(self, event):
+        if not event.inaxes: return
+        minim , maxim = self.__ax.get_ylim()
+        centery = (maxim -minim)/2 + minim
+        height = (maxim - minim) - event.step*(maxim - minim)/15  
+        self.__ax.set_ylim([centery - height/2, centery + height/2])
+        self.__selction.removeSelection()
+        self.__selction.setAx(self.__ax, self.__data)
+        self.__ax.figure.canvas.draw_idle()
+        
+        
+
+class SnaptoCursor:
+  
+    #crosshair snaps to the nearest x,y point
+    # x must be sorted
+
+    def __init__(self):
+        self.ax = None
+        self.x = None
+        self.y = None	
+
+    def setAx(self, data, ax, x, y, status):
+        self.x1 = self.y1 = self.x2 = self.y2 = None
+        self.status = status
+        self.ax = ax
+        self.x = x
+        self.y = y
+        self.__data = data
+        self.ly2 = self.ax.axvline(color='None', linewidth=1.3) 
+        self.ly = self.ax.axvline(color='None', linewidth=1.3)  
+        # text location in axes coords
+        self.txt1 = ax.text( 0.51, 0.95, '', transform=ax.transAxes)
+        self.txt2 = ax.text( 0.51, 0.91, '', transform=ax.transAxes, color='r')
+        self.txt3 = ax.text( 0.51, 0.87, '', transform=ax.transAxes, color='m')
+        self.cid = ax.figure.canvas.mpl_connect('button_press_event', self)
+
+    def __call__(self, event):
+
+        if not event.inaxes: return
+
+        x, y = event.xdata, event.ydata
+        # update the line positions
+
+        if event.button == 3:
+          indx = np.searchsorted(self.x, [x])[0]
+          self.x1 = self.x[indx]
+          self.y1 = self.y[indx] 
+          self.ly.set_xdata(self.x1)
+          self.ly.set_color('k')
+          s1 = 'x1 = '+'{:.2e}'.format(float(self.x1)) + \
+                '   y1 = ' + '{:.2e}'.format(float(self.y1)) + ' a.u.'
+          self.txt1.set_text(s1)
+          self.__data.setShifter(self.x1)
+          self.status.showMessage(s1)
+
+        if event.button == 2:
+          indx = np.searchsorted(self.x, [x])[0]
+          self.x2 = self.x[indx]
+          self.y2 = self.y[indx] 
+          self.ly2.set_xdata(self.x2)
+          self.ly2.set_color('r')
+          s2 = 'x2 = '+'{:.2e}'.format(float(self.x2)) + \
+                '   y2 = ' + '{:.2e}'.format(float(self.y2)) + ' a.u.'
+          self.txt2.set_text(s2)
+          self.status.showMessage(s2)
+        
+        # WARNING: this section is not a cursor! it is the double click zoom back method
+        #  and status bar click position for left click
+        if event.button == 1:
+           indx = np.searchsorted(self.x, [x])[0]
+           x3 = self.x[indx]
+           y3 = self.y[indx] 
+           s0 = 'x = '+'{:.2e}'.format(float(x3)) + \
+                '   y = ' + '{:.2e}'.format(float(y3)) + ' a.u.'
+           self.status.showMessage(s0)
+           if (event.dblclick) and (self.__data.getZoomStatus()):
+                self.__data.resetZoom(False)
+                self.__data.setZoom(True)
+                self.__data.plotstd()
+        #### END SPECIAl SECTION #############
+
+        if (self.x1) and (self.x2):
+            deltax = np.absolute (self.x1 - self.x2)
+            deltay = np.absolute (self.y1 - self.y2)
+            deltastr = 'delta_x '+'{:.2e}'.format(float(deltax))+' delta_y '+'{:.2e}'.format(float(deltax))
+            self.txt3.set_text(deltastr)
+
+        print ('x=%1.3f ms, y=%1.1f ms'%(x*1000,y))
+        self.ax.figure.canvas.draw_idle()
+
+    def getValues(self):
+        return [self.x1, self.x2, self.y1, self.y2]
+        
+       
+        

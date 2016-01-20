@@ -1,0 +1,108 @@
+# -*- coding: utf-8 -*-
+
+import numpy as np
+import io
+
+
+def make_str(b):
+    """Convert a bytes object to a str, decoding with latin1 if necessary"""
+    if isinstance(b, str):  # Python 2
+        return b
+    elif isinstance(b, bytes):  # Python 3
+        return b.decode('latin1')
+    else:
+        return b
+
+
+def convert_si(si_num_list):
+    """takes a list of strings, si_num_lst, of the form xxx.xxx<si suffix>
+    and returns an array of floats xxx.xxxe-6 or similar, depending on the si
+    suffix
+    """
+    # A dict of all the SI prefixes
+    prefix = {'y': 1e-24,  # yocto
+              'z': 1e-21,  # zepto
+              'a': 1e-18,  # atto
+              'f': 1e-15,  # femto
+              'p': 1e-12,  # pico
+              'n': 1e-9,   # nano
+              'u': 1e-6,   # micro
+              'm': 1e-3,   # mili
+              'c': 1e-2,   # centi
+              'd': 1e-1,   # deci
+              's': 1,      # seconds
+              'k': 1e3,    # kilo
+              'M': 1e6,    # mega
+              'G': 1e9,    # giga
+              'T': 1e12,   # tera
+              'P': 1e15,   # peta
+              'E': 1e18,   # exa
+              'Z': 1e21,   # zetta
+              'Y': 1e24,   # yotta
+              }
+    # go through the items in the list and try to float them. If they don't
+    # float...s
+    for index, item in enumerate(si_num_list):
+        try:
+            si_num_list[index] = float(item)
+        except ValueError:
+            # check if the last character is a valid prefix
+            if item[-1] in prefix:
+                # if it is, set that list element to the rest of the item
+                # multiplied by the value appropriate to the prefix
+                si_num_list[index] = prefix[item[-1]] * float(item[:-1])
+            else:
+                # raise if it doesn't work out
+                raise ValueError("Couldn't convert delay table entires\
+                                 to float! Make sure your suffixes\
+                                 correspond to real SI units.")
+    #return it as an array
+    return np.array(si_num_list)
+
+
+def read_string(data, number_type='<i4', encoding='ascii'):
+    number_type = np.dtype(number_type)
+    length = np.fromstring(data, dtype=number_type, count=1)
+    number_size = number_type.itemsize
+    text = data[number_size:number_size + length]
+    return text
+
+def export(actual,data,xaxis,fft_flag,filename):
+    if (filename):
+        fw = open(filename[0].split('.',1)[0]+'.txt', 'w')
+        if (fft_flag == True):
+                ax = 'freq(Hz)'
+        else:
+                ax = 'time(s)'
+        fw.write(ax + ' real '+ 'imag\n')
+        #print(xaxis) check if axis type is right
+        for ii in range(data[actual,:].size):
+            fw.write('{0:.7f} {1:.3f} {2:.3f}\n'.format(xaxis[ii], 
+            data[actual,:].real[ii], data[actual,:].imag[ii]))
+        fw.close() 
+        outcome = 'exported as: ' + filename[0].split('.',1)[0]+'.txt'
+        print(outcome)    
+
+
+def export_ints(integrals, magnitude, table,filename):
+    if (filename):
+        s = io.StringIO()
+        fw = open(filename[0].split('.',1)[0]+'_ints.dat', 'w') 
+        fw.write('delay\t' + 'real\t'+ 'imag\t'+'magnitude\n')
+        s.write('delay\t' + 'real\t'+ 'imag\t'+'magnitude\n')
+        for ii in range(integrals.size):
+                fw.write('{0:.7f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\n'.format(table[ii], 
+                integrals.real[ii], integrals.imag[ii], magnitude[ii]))
+                s.write('{0:.3e}\t{1:.3e}\t{2:.3e}\t{3:.3e}\n'.format(table[ii], 
+                integrals.real[ii], integrals.imag[ii], magnitude[ii]))
+        fw.close() 
+        stringints = s.getvalue()
+        s.close()
+        outcome = 'integrals exported as: ' + filename[0].split('.',1)[0]+'.txt'
+        return stringints, outcome  
+
+
+
+
+
+
