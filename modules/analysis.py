@@ -35,7 +35,7 @@ def phase(data, angle):
     # angle is in degree change to radians
     angle = angle / 360 * 2 * np.pi 
     phased = data * np.exp(-1j * angle) 
-    return phased, angle
+    return phased, angle * 360 / (2 * np.pi)
   
 
 def autophase(data, selection, actual2d, indipendent1d=False):
@@ -45,7 +45,7 @@ def autophase(data, selection, actual2d, indipendent1d=False):
         else:
            selected_range = data[actual2d,:]
         phased = data * np.exp(-1j * np.angle(np.sum(selected_range)))
-        phi = np.angle(np.sum(selected_range))
+        phi = np.angle(np.sum(selected_range)) * 360 / (2 * np.pi)
      else:
         phi = []
         if np.any(selection):
@@ -54,7 +54,7 @@ def autophase(data, selection, actual2d, indipendent1d=False):
            selected_range = data
         for point in range(data.shape[0]): 
            angle = np.angle(np.sum(selected_range[point,:]))
-           phi.append(angle)            
+           phi.append(angle * 360 / (2 * np.pi))            
            data[point,:] =  data[point,:] * np.exp(-1j * angle)
         phased = data       
      return phased, phi

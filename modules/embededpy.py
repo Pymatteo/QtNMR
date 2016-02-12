@@ -78,7 +78,7 @@ class QIPythonWidget(RichJupyterWidget):
         self._execute(command,False)
 
 
-class IpythonWidget(QtWidgets.QDialog):
+class IpythonWidget(QtWidgets.QMainWindow):
 # Main GUI dialog forIPython Console widget 
     def __init__(self, parent=None, data=None):
         super(IpythonWidget, self).__init__(parent)
@@ -88,12 +88,17 @@ class IpythonWidget(QtWidgets.QDialog):
         self.data = data
         
         self.setWindowTitle('QtNMR embedded IPython console')
+        
+        self.centralWidget = QtWidgets.QWidget()
+        
+        self.setCentralWidget(self.centralWidget)
+        
         layout = QtWidgets.QVBoxLayout()
 
         self.ipyConsole = QIPythonWidget(self, customBanner="Welcome to the QtNMR embedded IPython console\n")
      
         layout.addWidget(self.ipyConsole) 
-        self.setLayout(layout)       
+        self.centralWidget.setLayout(layout)       
         # This allows the variable foo and method print_process_id to be accessed from the ipython console
         self.ipyConsole.pushVariables({"np":np})
         

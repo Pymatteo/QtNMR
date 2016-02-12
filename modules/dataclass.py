@@ -249,7 +249,7 @@ class Data:
     def phase(self, angle):
         if self.__filename :
                 self.__dataplt, phase = analysis.phase(self.__dataplt, angle)
-                self.printer.append('Phase rotated (radians): '+str(phase))
+                self.printer.append('Phase rotated (degrees): '+str(phase))
                 self.plotstd()
 
 
@@ -260,7 +260,7 @@ class Data:
                 point2d = self.__actual2d
         self.__dataplt, phase = analysis.autophase(self.__dataplt, phaserange, 
                                 point2d, self.__1d_indip_phase)
-        self.printer.append('Phase correction (radians): '+str(phase))
+        self.printer.append('Phase correction (degrees): '+str(phase))
         self.plotstd()
 
 

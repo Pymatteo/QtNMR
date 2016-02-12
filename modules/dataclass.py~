@@ -260,7 +260,7 @@ class Data:
                 point2d = self.__actual2d
         self.__dataplt, phase = analysis.autophase(self.__dataplt, phaserange, 
                                 point2d, self.__1d_indip_phase)
-        self.printer.append('Phase correction (radians): '+str(phase))
+        self.printer.append('Phase correction (degrees): '+str(phase))
         self.plotstd()
 
 
@@ -268,7 +268,7 @@ class Data:
       if self.__filename :
        if np.any(self.__selection_setted):
          int_range = self.getSelectionRange(self.__axis, self.__selection_setted)
-         integrals, magnitude_integral = analysis.integrate(self.__dataplt, int_range, self.__scans)
+         integrals, magnitude_integral = analysis.integrate(self.__dataplt, int_range, self.__scans, self.__actual_scans)
          print(integrals)
          table = self.__delay_tables_si[self.__actual_delay]
          if table.size != integrals.size:
