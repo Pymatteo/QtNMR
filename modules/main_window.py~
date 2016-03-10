@@ -169,7 +169,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 None, None,
                 "Preferences")
         
-        embedpyAction = self.createAction("&Python console", self.pref,
+        embedpyAction = self.createAction("&Python console", self.embedpy,
                 QtGui.QKeySequence("Ctrl+T"), None,
                 "Embeded IPython terminal")                                     
         
@@ -240,6 +240,7 @@ class MainWindow(QtWidgets.QMainWindow):
         optionsMenu.addAction(prefAction)
         
         scriptsMenu.addAction(runScriptAction)
+        scriptsMenu.addAction(embedpyAction)
 
         fileToolbar.addAction(fileOpenAction)
         fileToolbar.addAction(prevFileAction)
@@ -361,16 +362,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dat.load_script() 
         
     def pref(self):
+      if self.dat.getFilename() is not None : 
         dialog = prefdialog.prefDlg(parent=self, data=self.dat)
         dialog.show()
         if dialog.exec_():
-           print(prefdialog.result())
+           print(dialog.result())
+           #print(dialog.result())
            
     def embedpy(self):       
         dialog = embededpy.IpythonWidget(parent=self, data=self.dat)
         dialog.show()
-        #if dialog.exec_():
-           #print(prefdialog.result())
+        
     
     @QtCore.pyqtSlot(int)
     def select2D(self,delaypoint):

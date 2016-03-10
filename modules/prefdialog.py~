@@ -17,9 +17,6 @@ class prefDlg(QtWidgets.QDialog):
         squareapod_CheckBox = QtWidgets.QCheckBox("Fix")
         squareapod_CheckBox.setChecked(self.data.getSqrApodBool())
         squareapod_CheckBox.stateChanged.connect(self.data.setSqrApodBool)
-        square_Spinbox.setRange(0, self.data.get1dpoints())
-        square_Spinbox.valueChanged.connect(self.data.setSqrShift)
-        square_Spinbox.setValue(self.data.getSqrShift())
         #square_Spinbox.setRange(1, 10000)
 
         leftShift_Label = QtWidgets.QLabel('Left shift: ')
@@ -29,7 +26,7 @@ class prefDlg(QtWidgets.QDialog):
         leftShift_CheckBox.stateChanged.connect(self.data.setLeftShiftBool)
         leftShift_Spinbox.setRange(0, self.data.get1dpoints())
         leftShift_Spinbox.valueChanged.connect(self.data.setLeftShift)
-        leftShift_Spinbox.setValue(self.data.getLeftShift())
+
 
         LB_Spinbox = QtWidgets.QSpinBox()
         LB_Spinbox.setMinimum(0)

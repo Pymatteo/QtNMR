@@ -38,6 +38,11 @@ class Data:
         self.__1d_indip_phase = False
         self.__saved_selection = None
         self.__shifter = None
+        self.__LB=100
+        self.__LeftShiftBool = False
+        self.__SqrApodBool = False
+        self.__SqrShift = 0
+        self.__LeftShift = 0
 
 ################ GETTERS and SETTERS ############### 
 
@@ -66,7 +71,7 @@ class Data:
         return np.copy(self.__time)
         
     def getXaxis(self): 
-        return np.copy(self.__time)  
+        return np.copy(self.__axis)  
 
     def getFtFlag(self):
         return self.__ft_flag
@@ -129,8 +134,53 @@ class Data:
     def setShifter(self, shifter):
         self.__shifter = np.searchsorted(self.__axis, [shifter])[0]
         self.printer.append('Shifter in '+str(self.__shifter))
+        if not self.__SqrApodBool:
+               self.__SqrShift = self.__shifter
+        if self.__LeftShiftBool is False:
+               self.__LeftShift = self.__shifter
+
+    def setLB(self, LB):
+        self.__LB=LB
+        self.printer.append('Setted Line Broadening: '+str(self.__LB))
+
+    def getLB(self):
+        return self.__LB
+
+    def getLeftShiftBool(self):
+        return self.__LeftShiftBool
+
+    def getSqrApodBool(self):
+        return self.__SqrApodBool
+
+    def setLeftShiftBool(self):
+        print(self.__LeftShiftBool)
+        if self.__LeftShiftBool: 
+            self.__LeftShiftBool = False
+        else:
+            self.__LeftShiftBool = True
+        print(self.__LeftShiftBool)
+
+    def setSqrApodBool(self):
+        if self.__SqrApodBool: 
+            self.__SqrApodBool = False
+        else:
+            self.__SqrApodBool = True
+
+    def setLeftShift(self, shift):
+        self.__LeftShift = shift
+
+    def setSqrShift(self, shift):
+        self.__SqrShift = shift
+
+    def getLeftShift(self):
+        return self.__LeftShift
+
+    def getSqrShift(self):
+        return self.__SqrShift
+
 
 ############### END GETTERS ############### 
+
 ###############  PLOTTERS #################
         
     def resetZoom(self, check):
@@ -249,7 +299,7 @@ class Data:
     def phase(self, angle):
         if self.__filename :
                 self.__dataplt, phase = analysis.phase(self.__dataplt, angle)
-                self.printer.append('Phase rotated (radians): '+str(phase))
+                self.printer.append('Phase rotated (degrees): '+str(phase))
                 self.plotstd()
 
 
@@ -313,30 +363,29 @@ class Data:
         self.printer.append('WARNING no selection, aborting')
 
     def left_shift(self, check):
-       if self.__filename and self.__shifter and (self.__ft_flag is False):
+       if self.__filename and self.__LeftShift:
          if check is True:
                 self.bl_correction(False)
-         self.__dataplt = analysis.leftshift(self.__dataplt, self.__shifter,check) 
-         self.printer.append('Shifted: '+ str(self.__shifter))
+         self.__dataplt = analysis.leftshift(self.__dataplt, self.__LeftShift,check) 
+         self.printer.append('Shifted: '+ str(self.__LeftShift))
          self.plotstd()
 
     def zerofill(self):
-       if self.__filename and (self.__ft_flag is False):
+       if self.__filename and not self.__ft_flag:
           self.__dataplt, self.__time = analysis.zerofill(self.__dataplt, self.__time) 
           self.__axis = self.__time
           self.plotstd()
 
     def exp_apodization(self):
-       if self.__filename and (self.__ft_flag is False):
+       if self.__filename and not self.__ft_flag:
           # remember time[1] is equal to the dwell time
-          LB = 100
-          self.__dataplt = analysis.exp_apodization(self.__dataplt, self.__time[1],LB) 
+          self.__dataplt = analysis.exp_apodization(self.__dataplt, self.__time[1],self.__LB) 
           self.plotstd()
 
     def sqr_apodization(self):
-       if self.__filename and self.__shifter and (self.__ft_flag is False):
-          self.bl_correction(False)
-          self.__dataplt = analysis.sqr_apodization(self.__dataplt, self.__shifter) 
+       if self.__filename and self.__SqrShift and not self.__ft_flag:
+          if not self.__ft_flag:  self.bl_correction(False)
+          self.__dataplt = analysis.sqr_apodization(self.__dataplt, self.__SqrShift) 
           self.plotstd()
 
     def load_script(self):

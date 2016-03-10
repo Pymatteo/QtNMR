@@ -3,6 +3,10 @@ import numpy as np
 import sys
 import os
 
+############################################
+# all this section is an hack to ensure it works with cxfreeze
+##############################################
+
 class dummyStream:
         ''' dummyStream behaves like a stream but does nothing. '''
         def __init__(self): pass
@@ -11,7 +15,9 @@ class dummyStream:
         def flush(self): pass
         def close(self): pass
         # and now redirect all default streams to this dummyStream:
-        
+
+# uncomment the following to cxfreeze 
+'''        
 sys.stdout = dummyStream()
 sys.stderr = dummyStream()
 sys.stdin = dummyStream()
@@ -21,6 +27,7 @@ sys.__stdin__ = dummyStream()
 
 os.environ['QT_API'] = 'pyqt5'
 os.environ['PYZMQ_BACKEND'] = 'cython'
+'''
 
 def new_load_qt(api_options):
     import types
@@ -42,6 +49,10 @@ def new_load_qt(api_options):
 from qtconsole import  qt_loaders   
 
 qt_loaders.load_qt = new_load_qt 
+
+#####################################
+##### HACK END #######################
+#####################################
 
 from qtconsole.rich_ipython_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
@@ -100,7 +111,7 @@ class IpythonWidget(QtWidgets.QMainWindow):
         layout.addWidget(self.ipyConsole) 
         self.centralWidget.setLayout(layout)       
         # This allows the variable foo and method print_process_id to be accessed from the ipython console
-        self.ipyConsole.pushVariables({"np":np})
+        self.ipyConsole.pushVariables({"data":data})
         
 
     

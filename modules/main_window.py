@@ -362,16 +362,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dat.load_script() 
         
     def pref(self):
+      if self.dat.getFilename() is not None : 
         dialog = prefdialog.prefDlg(parent=self, data=self.dat)
         dialog.show()
         if dialog.exec_():
-           print(prefdialog.result())
+           print(dialog.result())
+        else:
+           print(dialog.nonaccpted())
            
     def embedpy(self):       
         dialog = embededpy.IpythonWidget(parent=self, data=self.dat)
         dialog.show()
-        #if dialog.exec_():
-           #print(prefdialog.result())
+        
     
     @QtCore.pyqtSlot(int)
     def select2D(self,delaypoint):
