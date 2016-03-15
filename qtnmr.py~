@@ -10,6 +10,9 @@ import modules.qrc_resources
 if __name__ == '__main__':
         
     app = QtWidgets.QApplication(sys.argv)
+    app.setOrganizationName("Universita di Pavia - Dip. di Fisica - NMR group")
+    app.setOrganizationDomain("qtrac.eu")
+    app.setApplicationName("QtNMR")
     app.setWindowIcon(QtGui.QIcon(':/icon.png'))
  
     main = main_window.MainWindow()

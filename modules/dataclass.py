@@ -18,6 +18,7 @@ class Data:
         self.__acq_points = np.zeros(2, dtype=np.int32)
         self.__actual2d = None
         self.__qwidget = qwidget
+        ## handle to main window load method #####
         self.loader = loader
         # points to be plotted, processed data: dataplt
         self.__dataplt = None
@@ -283,7 +284,7 @@ class Data:
         self.__dataplt = np.copy(self.__data)
         self.__time = np.copy(self.__raw_time) 
         self.__axis = self.__time
-        self.__actual2d = 0
+        #self.__actual2d = 0
         self.plotstd()
         self.printer.append('Back to raw data')
 
@@ -394,14 +395,15 @@ class Data:
             code = compile(f.read(), "script.py", 'exec')
             exec(code)
           
-          
+    def reloader(self):
+        if self.__filename: self.loadFile(self.__filename)    
 
 # TO DO:
 # export and baseline correction actions DONE
 # 2D support DONE
 # selection (zoom) DONE
 # delay tables DONE 
-# phase correction DONE (auto)
+# phase correction DONE 
 # auto phase DONE
 # integrals DONE
 # logging improved DONE
@@ -410,7 +412,12 @@ class Data:
 # exp apodization DONE
 # left shift DONE
 # zero fill DONE
-# export save LATER
+# set auto echo find sensisitivity
+# reload DONE
+# export save 
+# !!!auto select table
+# autoscale on off
+# !!!load scripts
 
 
 

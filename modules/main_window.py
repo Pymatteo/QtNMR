@@ -12,7 +12,25 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        self.myQWidget = graphics.Widgetmain()
+        
+        ######## Window parameters and recent files ###############
+        self.MaxRecentFiles = 10
+        self.recentFileActs = []
+        
+        settings = QtCore.QSettings()
+        self.recentFiles = settings.value("RecentFiles")
+#        print(self.recentFiles)
+        
+        size = settings.value("MainWindow/Size", QtCore.QVariant(QtCore.QSize(800, 600)))
+        
+        self.resize(size)
+        position = settings.value("MainWindow/Position", QtCore.QVariant(QtCore.QPoint(0, 0)))
+        self.move(position)
+        
+        ####################################################
+        ####################################################
+
+        self.myQWidget = graphics.Widgetmain()       
         #self.dirty = False
         
         self.dat = dataclass.Data(self.myQWidget, self.loadFile)
@@ -59,6 +77,12 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.fileMenu.aboutToShow.connect(self.updateWindowMenu)
         
         # ACTIONS DEFINITIONS
+
+        ### recent files ####
+        for i in range(self.MaxRecentFiles):
+            self.recentFileActs.append(QtWidgets.QAction(self, visible=False, 
+                                        triggered=self.openRecentFile))                    
+        ######################
         
         fileOpenAction = self.createAction("&Open...", self.fileOpen,
                 QtGui.QKeySequence.Open, ":/fileopen.png",
@@ -92,6 +116,9 @@ class MainWindow(QtWidgets.QMainWindow):
         
         rawDataAction = self.createAction("&Back to Raw Data", self.raw_data,
                 None, ":/rawdata.png", "Back to Raw Data") 
+
+        reloadAction = self.createAction("&Reload", self.reloader,
+                QtGui.QKeySequence("F12"), ":/reload-icon.png", "Reload File") 
 
         autoPhaseAction = self.createAction("&Auto Phase", self.autophase,
                 QtGui.QKeySequence("Ctrl+P"), ":/autophase.png",
@@ -202,14 +229,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addAction(runScriptAction)
         self.addAction(prefAction)
         self.addAction(embedpyAction)
-        
+        self.addAction(reloadAction)
+
         
         #import actions to widgets   
         self.fileMenu.addAction(fileOpenAction)
         self.fileMenu.addAction(nextFileAction)
         self.fileMenu.addAction(prevFileAction)
+        self.fileMenu.addAction(reloadAction)
         self.fileMenu.addAction(exportAction)
         self.fileMenu.addSeparator()
+        ### recent files ###############
+        for i in range(self.MaxRecentFiles):
+            self.fileMenu.addAction(self.recentFileActs[i])
+        
+        self.separatorAct = self.fileMenu.addSeparator()
+        #################################
         self.fileMenu.addAction(fileQuitAction)
 
         viewMenu.addAction(fullScreenViewAction)
@@ -228,7 +263,6 @@ class MainWindow(QtWidgets.QMainWindow):
         analysisMenu.addAction(bc_phc_intAction)
         analysisMenu.addAction(find_phc_intAction)
 
-        toolsMenu.addAction(indipendentPhaseAction)
         toolsMenu.addAction(findEchoAction)
         toolsMenu.addAction(leftshiftAction)
         toolsMenu.addAction(rollshiftAction)   
@@ -237,6 +271,7 @@ class MainWindow(QtWidgets.QMainWindow):
         toolsMenu.addAction(saveSelectionAction)
         toolsMenu.addAction(loadSelectionAction)
         
+        optionsMenu.addAction(indipendentPhaseAction)
         optionsMenu.addAction(prefAction)
         
         scriptsMenu.addAction(runScriptAction)
@@ -247,6 +282,7 @@ class MainWindow(QtWidgets.QMainWindow):
         fileToolbar.addAction(nextFileAction)
         fileToolbar.addAction(self.fourierTransformAction)
         fileToolbar.addAction(inverseTransformAction)
+        fileToolbar.addAction(reloadAction)
         fileToolbar.addAction(rawDataAction)
         fileToolbar.addAction(baselineAction)
         fileToolbar.addAction(autoPhaseAction)
@@ -274,6 +310,11 @@ class MainWindow(QtWidgets.QMainWindow):
         #self.delayComboBox.setFocusPolicy(QtCore.Qt.NoFocus)
         self.delayComboBox.currentIndexChanged.connect(self.box_delay_table)
         fileToolbar.addWidget(self.delayComboBox)
+
+        ### show correct separators recent files ####
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if isinstance(widget, MainWindow):
+                widget.updateRecentFileActions()
     
     def fourier(self):
         self.dat.fourier(True)
@@ -296,10 +337,15 @@ class MainWindow(QtWidgets.QMainWindow):
     def inv_fourier(self):
         self.dat.inv_fourier() 
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
+
+    def reloader(self): 
+        self.dat.reloader()
+        self.pointSpinBox.setValue(1)
+        self.fourierTransformAction.setChecked(self.dat.getFtFlag())
                 
     def raw_data(self): 
         self.dat.raw_data()
-        self.pointSpinBox.setValue(1)
+        #self.pointSpinBox.setValue(1)
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
 
     def autophase(self):
@@ -406,8 +452,51 @@ class MainWindow(QtWidgets.QMainWindow):
         self.delayComboBox.clear()
         delays = sorted(self.dat.getDelayTables())
         self.delayComboBox.addItems(delays)
-        
-        
+
+
+        settings = QtCore.QSettings()
+        files = settings.value('recentFileList', [])
+
+        try:
+            files.remove(self.dat.getFilename()[0])
+        except ValueError:
+            pass
+
+        files.insert(0, self.dat.getFilename()[0])
+        del files[self.MaxRecentFiles:]
+
+        settings.setValue('recentFileList', files)
+
+        for widget in QtWidgets.QApplication.topLevelWidgets():
+            if isinstance(widget, MainWindow):
+                widget.updateRecentFileActions()
+
+
+    def updateRecentFileActions(self):
+        settings = QtCore.QSettings()
+        files = settings.value('recentFileList', [])
+
+        numRecentFiles = min(len(files), self.MaxRecentFiles)
+
+        for i in range(numRecentFiles):
+            text = "&%d %s" % (i + 1, self.strippedName(files[i]).replace("_", "-"))
+            self.recentFileActs[i].setText(text)
+            self.recentFileActs[i].setData(files[i])
+            self.recentFileActs[i].setVisible(True)
+
+        for j in range(numRecentFiles, self.MaxRecentFiles):
+            self.recentFileActs[j].setVisible(False)
+
+        self.separatorAct.setVisible((numRecentFiles > 0))
+    
+    def strippedName(self, fullFileName):
+        return QtCore.QFileInfo(fullFileName).fileName()
+
+    def openRecentFile(self):
+        action = self.sender()
+        if action:
+          if os.path.exists(action.data()):
+            self.loadFile((action.data(),'*.tnt'))     
 
     #full screen
     def fscreen(self):

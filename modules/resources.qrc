@@ -14,5 +14,6 @@
 <file alias="nextfile.png">../imm/nextfile.png</file>
 <file alias="prevfile.png">../imm/prevfile.png</file>
 <file alias="icon.png">../imm/icon.png</file>
+<file alias="reload-icon.png">../imm/reload-icon.png</file>
 </qresource>
 </RCC>

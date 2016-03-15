@@ -13,6 +13,7 @@
 <file alias="find-int.png">../imm/find-int.png</file>
 <file alias="nextfile.png">../imm/nextfile.png</file>
 <file alias="prevfile.png">../imm/prevfile.png</file>
-<file alias="prevfile.png">../imm/icon.png</file>
+<file alias="icon.png">../imm/icon.png</file>
+<file alias="icon.png">../imm/reload-icon.png</file>
 </qresource>
 </RCC>
