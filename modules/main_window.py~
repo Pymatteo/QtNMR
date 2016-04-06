@@ -452,6 +452,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.delayComboBox.clear()
         delays = sorted(self.dat.getDelayTables())
         self.delayComboBox.addItems(delays)
+        
 
 
         settings = QtCore.QSettings()

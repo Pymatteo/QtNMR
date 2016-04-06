@@ -1,0 +1,7 @@
+import numpy as np
+
+def run_script(data):
+    if self.__filename:
+          with open("script.py") as f:
+            code = compile(f.read(), "script.py", 'exec')
+            exec(code)

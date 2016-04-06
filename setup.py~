@@ -3,10 +3,10 @@ from cx_Freeze import setup, Executable
 #### needed for ipython ########################
 import zmq
 import pygments
-#,'zmq.backend.cython','pygments.lexers.agile' 'pygments.styles.default'
+#,'zmq.backend.cython','pygments.lexers.agile' 'pygments.styles.default''zmq.utils.garbage'
 #################################################
 
-includes = ['sys','PyQt5.QtCore','PyQt5.QtGui', 'PyQt5.QtWidgets','matplotlib', 'numpy', 'platform', 'struct', 'modules', 'os','re','copy','scipy.fftpack','io','glob','PyQt5.QtSvg','zmq.backend.cython','pygments.lexers.agile','pygments.styles.default']
+includes = ['sys','PyQt5.QtCore','PyQt5.QtGui', 'PyQt5.QtWidgets','matplotlib', 'numpy', 'platform', 'struct', 'modules', 'os','re','copy','scipy.fftpack','io','glob','PyQt5.QtSvg','zmq.backend.cython','pygments.lexers.agile','pygments.styles.default','zmq.utils.garbage','zmq.backend.cython']
 excludes = []
 packages = []
 path = []
@@ -16,7 +16,7 @@ base = None
 #                     "optimize": 2}
 
 if sys.platform == 'win32':
-    base = 'Win32GUI'
+    base = "Win32GUI"
     
 options = {
     'build_exe': {

@@ -5,7 +5,8 @@ import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 import modules.main_window as main_window
 import modules.qrc_resources
-        
+
+os.environ['PYZMQ_BACKEND'] = 'cython'     
 
 if __name__ == '__main__':
         
