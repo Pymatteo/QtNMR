@@ -331,8 +331,14 @@ class Data:
          int_range = self.getSelectionRange(self.__axis, self.__selection_setted)
          integrals, magnitude_integral = analysis.integrate(self.__dataplt, int_range, self.__scans, self.__actual_scans)
          print(integrals)
-         table = self.__delay_tables_si[self.__actual_delay]
-         if table.size != integrals.size:
+         print('self.__delay_tables_si',self.__delay_tables_si)
+         if self.__delay_tables_si:
+          table = self.__delay_tables_si[self.__actual_delay]
+          if table.size != integrals.size:
+            table = range(1,integrals.size+1)
+            print('WARNING: table size not match')
+            self.printer.append('WARNING: table size not match using integers')
+         else:
             table = range(1,integrals.size+1)
             print('WARNING: table size not match')
             self.printer.append('WARNING: table size not match using integers')
@@ -406,7 +412,7 @@ class Data:
             exec(code)
           
     def reloader(self):
-        if self.__filename: self.loadFile(self.__filename)    
+        if self.__filename: self.loader(self.__filename)    
 
 # TO DO:
 # export and baseline correction actions DONE
