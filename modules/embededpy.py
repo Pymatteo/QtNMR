@@ -17,14 +17,14 @@ class dummyStream:
         # and now redirect all default streams to this dummyStream:
 
 # uncomment the following to cxfreeze 
-'''       
-sys.stdout = dummyStream()
-sys.stderr = dummyStream()
-sys.stdin = dummyStream()
-sys.__stdout__ = dummyStream()
-sys.__stderr__ = dummyStream()
-sys.__stdin__ = dummyStream()
-'''
+       
+#sys.stdout = dummyStream()
+#sys.stderr = dummyStream()
+#sys.stdin = dummyStream()
+#sys.__stdout__ = dummyStream()
+#sys.__stderr__ = dummyStream()
+#sys.__stdin__ = dummyStream()
+
 os.environ['QT_API'] = 'pyqt5'
 os.environ['PYZMQ_BACKEND'] = 'cython'
 

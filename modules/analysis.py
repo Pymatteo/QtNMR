@@ -1,6 +1,7 @@
 import modules.utils as utils
 import numpy as np
-import scipy.fftpack as sc 
+# import scipy.fftpack as sc 
+import numpy.fft as sc 
 import re
 
 
@@ -21,12 +22,15 @@ def fourier(data, time):
         freq = np.concatenate((freq[freq.size/2:] , freq[:freq.size/2]))
         fftdata  = sc.fft(data, None, axis=-1)
         fftdata = np.concatenate((fftdata[:, npts/2:] , fftdata[:,:npts/2]), axis=-1)
+        # frequencies are reversed in ntnmr so we have to flip! 
+        fftdata = np.fliplr(fftdata)
         return (fftdata/np.sqrt(npts)), freq
 
         
 def invfourier(data): 
         npts = data.shape[-1]
         data *= np.sqrt(npts)
+        data = np.fliplr(data)
         data = sc.ifft(np.concatenate((data[:, npts/2:] , 
                                   data[:,:npts/2]), axis=-1))  
         return data

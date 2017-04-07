@@ -20,7 +20,9 @@ def fourier(data, time):
         freq = sc.fftfreq(time.size, d=timestep)
         freq = np.concatenate((freq[freq.size/2:] , freq[:freq.size/2]))
         fftdata  = sc.fft(data, None, axis=-1)
+        # frequencies are reversed in ntnmr so we have to flip! [::-1]
         fftdata = np.concatenate((fftdata[:, npts/2:] , fftdata[:,:npts/2]), axis=-1)
+        fftdata = fftdata[::-1]
         return (fftdata/np.sqrt(npts)), freq
 
         
@@ -35,7 +37,7 @@ def phase(data, angle):
     # angle is in degree change to radians
     angle = angle / 360 * 2 * np.pi 
     phased = data * np.exp(-1j * angle) 
-    return phased, angle
+    return phased, angle * 360 / (2 * np.pi)
   
 
 def autophase(data, selection, actual2d, indipendent1d=False):

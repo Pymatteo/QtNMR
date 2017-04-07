@@ -272,7 +272,7 @@ class Data:
         if ( bl is True ) : self.bl_correction(False)  
         self.__dataplt, self.__freq = analysis.fourier(self.__dataplt, self.__time)
         self.__ft_flag = True
-        self.__axis = self.__freq
+        self.__axis = -1*self.__freq
         self.plotstd()
 
           
@@ -335,6 +335,10 @@ class Data:
          if self.__delay_tables_si:
           table = self.__delay_tables_si[self.__actual_delay]
           if table.size != integrals.size:
+            table = range(1,integrals.size+1)
+            print('WARNING: table size not match')
+            self.printer.append('WARNING: table size not match using integers')
+         else:
             table = range(1,integrals.size+1)
             print('WARNING: table size not match')
             self.printer.append('WARNING: table size not match using integers')
