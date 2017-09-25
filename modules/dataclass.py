@@ -284,6 +284,19 @@ class Data:
         self.__ft_flag = False
         self.__dataplt = analysis.invfourier(self.__dataplt)
         self.plotstd()
+        
+        
+    def notch(self):
+       if ( self.__filename and self.__ft_flag is True ) :
+        if np.any(self.__selection_setted):
+           print('notch')
+           notch_range = self.getSelectionRange(self.__axis, self.__selection_setted)
+           self.__dataplt = analysis.notch(self.__dataplt, notch_range)
+           self.plotstd()
+        else:
+           print('WARNING: no selection, aborting filtering') 
+           self.printer.append('WARNING: no selection, aborting filtering')
+
 
     
     def raw_data(self): 

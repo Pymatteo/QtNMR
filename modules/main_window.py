@@ -200,6 +200,9 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtGui.QKeySequence("Ctrl+T"), None,
                 "Embeded IPython terminal")                                     
         
+        bandStopAction = self.createAction("&Band Stop Filter", self.notch,
+                QtGui.QKeySequence("Ctrl+N"), None,
+                "Band Stop Filter")        
 
         #import actions to windows   
         self.addAction(fileOpenAction)
@@ -230,7 +233,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addAction(prefAction)
         self.addAction(embedpyAction)
         self.addAction(reloadAction)
-
+        self.addAction(bandStopAction)
+        
         
         #import actions to widgets   
         self.fileMenu.addAction(fileOpenAction)
@@ -262,6 +266,7 @@ class MainWindow(QtWidgets.QMainWindow):
         analysisMenu.addAction(integrateAction)
         analysisMenu.addAction(bc_phc_intAction)
         analysisMenu.addAction(find_phc_intAction)
+        analysisMenu.addAction(bandStopAction)
 
         toolsMenu.addAction(findEchoAction)
         toolsMenu.addAction(leftshiftAction)
@@ -389,6 +394,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def zerofill(self):
         self.dat.zerofill()
+        
+    def notch(self):
+        self.dat.notch()    
 
     def exp_apodization(self):
         self.dat.exp_apodization()

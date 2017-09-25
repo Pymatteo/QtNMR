@@ -125,4 +125,7 @@ def sqr_apodization(data, cutter):
         data = data * np.concatenate((ones, zeros))
         return data
 
+def notch(data, selection):
+        data[:, selection[0]:selection[1]] = data[:, selection[0]:selection[1]] - data[:, selection[0]:selection[1]]/20
+        return data
       
