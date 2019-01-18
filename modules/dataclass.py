@@ -13,8 +13,8 @@ class Data:
         # loader is the main function loadfile method to
         # make it available for scripts it is an hack
         self.__filename = None
-        self.__data = None       
-        self.__raw_time = None      
+        self.__data = None
+        self.__raw_time = None
         self.__acq_points = np.zeros(2, dtype=np.int32)
         self.__actual2d = None
         self.__qwidget = qwidget
@@ -23,7 +23,7 @@ class Data:
         # points to be plotted, processed data: dataplt
         self.__dataplt = None
         self.__ft_flag = False
-        self.__time = None 
+        self.__time = None
         self.__freq = None
         self.__axis = None
         self.__scans = None
@@ -44,35 +44,42 @@ class Data:
         self.__SqrApodBool = False
         self.__SqrShift = 0
         self.__LeftShift = 0
+        self.__threshold = 4
 
-################ GETTERS and SETTERS ############### 
+################ GETTERS and SETTERS ###############
+
+    def setTimerInterval(self, timer_interval):
+        self.timer_interval = timer_interval
+
+    def getTimerInterval(self):
+        return self.timer_interval
 
     def setPrinter(self, printer):
         self.printer = printer
 
-    def getDataRaw(self): 
+    def getDataRaw(self):
         return np.copy(self.__data)
 
-    def getData(self): 
+    def getData(self):
         return np.copy(self.__dataplt)
 
-    def getFilename(self): 
+    def getFilename(self):
         return self.__filename
 
-    def get2dpoints(self): 
+    def get2dpoints(self):
         return self.__acq_points[1]
 
-    def get1dpoints(self): 
+    def get1dpoints(self):
         return self.__acq_points[0]
 
-    def getTimeRaw(self): 
+    def getTimeRaw(self):
         return np.copy(self.__raw_time)
 
-    def getTime(self): 
+    def getTime(self):
         return np.copy(self.__time)
-        
-    def getXaxis(self): 
-        return np.copy(self.__axis)  
+
+    def getXaxis(self):
+        return np.copy(self.__axis)
 
     def getFtFlag(self):
         return self.__ft_flag
@@ -84,12 +91,12 @@ class Data:
         return indx
 
     def getSelection(self):
-        return self.__selection_setted 
-        
+        return self.__selection_setted
+
     def setSelection(self, x1, x2):
         self.__selection_setted = x1, x2
         self.printer.append('setted selection: '+str(self.__selection_setted))
-        print('setted selection:',self.__selection_setted) 
+        print('setted selection:',self.__selection_setted)
 
     def setZoom(self, status):
         self.__zoom = status
@@ -97,7 +104,7 @@ class Data:
     def getZoomStatus(self):
         if self.__zoomcleaning:
            return False
-        else: 
+        else:
            return np.any(self.__selection_active)
 
     def getDelayTables(self):
@@ -106,7 +113,7 @@ class Data:
     def setPhasingType(self):
         if self.__1d_indip_phase is False:
                 self.__1d_indip_phase = True
-        else: 
+        else:
                 self.__1d_indip_phase = False
 
     def setSaved(self):
@@ -117,16 +124,16 @@ class Data:
         if self.__saved_selection is not None:
            self.setSelection(self.__saved_selection[0], self.__saved_selection[1])
            self.plotstd()
-           
+
     def autoSelectDelay(self):
           self.__actual_delay = sorted(self.__delay_tables_si.keys())[0]
           for de in self.__delay_tables_si :
-                if self.__delay_tables_si[de].size == self.__acq_points[1]:  
+                if self.__delay_tables_si[de].size == self.__acq_points[1]:
                    self.__actual_delay = de
           if (sorted(self.__delay_tables_si.keys()).index(self.__actual_delay)==0):
                self.__actual_delay= sorted(self.__delay_tables_si.keys())[0]
                self.setActualDelay(self.__actual_delay)
-          return  sorted(self.__delay_tables_si.keys()).index(self.__actual_delay)                
+          return  sorted(self.__delay_tables_si.keys()).index(self.__actual_delay)
 
     def setActualDelay(self,actualdelay):
         if actualdelay and self.__actual_delay:
@@ -137,9 +144,9 @@ class Data:
           if (self.__acq_points[1] != self.__delay_tables_si[actualdelay].size):
                 self.printer.append('WARNING: table size does not match 2D points')
           print(self.__delay_tables_si[actualdelay])
-     
+
     def select2d(self, delaypoint):
-        self.__actual2d = delaypoint -1 
+        self.__actual2d = delaypoint -1
         self.plotstd()
 
     def setShifter(self, shifter):
@@ -165,14 +172,14 @@ class Data:
 
     def setLeftShiftBool(self):
         print(self.__LeftShiftBool)
-        if self.__LeftShiftBool: 
+        if self.__LeftShiftBool:
             self.__LeftShiftBool = False
         else:
             self.__LeftShiftBool = True
         print(self.__LeftShiftBool)
 
     def setSqrApodBool(self):
-        if self.__SqrApodBool: 
+        if self.__SqrApodBool:
             self.__SqrApodBool = False
         else:
             self.__SqrApodBool = True
@@ -189,11 +196,17 @@ class Data:
     def getSqrShift(self):
         return self.__SqrShift
 
+    def setThreshold(self, threshold):
+        self.__threshold = threshold
 
-############### END GETTERS ############### 
+    def getThreshold(self):
+        return self.__threshold
+
+
+############### END GETTERS ###############
 
 ###############  PLOTTERS #################
-        
+
     def resetZoom(self, check):
         self.__selection_active = np.zeros(2, dtype=np.float64)
         self.__selection_setted = np.zeros(2, dtype=np.float64)
@@ -221,17 +234,17 @@ class Data:
             self.printer.append('active selection: '+str(self.__selection_active))
             print('activeselection', self.__selection_active)
 
-        self.__qwidget.plot(ax, plotdata.real, plotdata.imag, 
+        self.__qwidget.plot(ax, plotdata.real, plotdata.imag,
                        np.absolute(plotdata), ax[-1], ax[0], self)
-        
+
 
     def plotstd(self):
         self.plot(self.__dataplt[self.__actual2d,:], self.__axis)
-        
-############### END PLOTTERS ###############     
 
-    def loadFile(self, loadfname=None): 
-        self.__freq = None             
+############### END PLOTTERS ###############
+
+    def loadFile(self, loadfname=None):
+        self.__freq = None
         self.__ft_flag = False
         self.resetZoom(False)
         self.__delay_tables = None
@@ -240,8 +253,8 @@ class Data:
         self.__filename = loadfname
 
         self.__acq_points,self.__data,self.__time,self.__delay_tables, \
-        self.__delay_tables_si, self.__scans, self.__actual_scans = tntimport.tntopen(loadfname)   
-        
+        self.__delay_tables_si, self.__scans, self.__actual_scans = tntimport.tntopen(loadfname)
+
         self.__dataplt = np.copy(self.__data)
         self.__raw_time = np.copy(self.__time)
         self.__axis = self.__time
@@ -259,33 +272,33 @@ class Data:
         self.printer.append('File name: ' + self.__filename[0])
         self.plotstd()
 
-   
-    def export(self): 
+
+    def export(self):
         if ( self.__filename ):
            utils.export(self.__actual2d,self.__dataplt,self.__axis,self.__ft_flag,self.__filename)
-           self.printer.append('Exported') 
+           self.printer.append('Exported')
 
-   
-    def fourier(self,bl):   
+
+    def fourier(self,bl):
       if ( self.__filename and self.__ft_flag is False) :
         self.resetZoom(False)
-        if ( bl is True ) : self.bl_correction(False)  
+        if ( bl is True ) : self.bl_correction(False)
         self.__dataplt, self.__freq = analysis.fourier(self.__dataplt, self.__time)
         self.__ft_flag = True
         self.__axis = self.__freq
         self.plotstd()
 
-          
+
     def inv_fourier(self):
        if ( self.__filename and self.__ft_flag is True ) :
         self.resetZoom(False)
-        self.__axis = self.__time                      
-        self.__freq = None             
+        self.__axis = self.__time
+        self.__freq = None
         self.__ft_flag = False
         self.__dataplt = analysis.invfourier(self.__dataplt)
         self.plotstd()
-        
-        
+
+
     def notch(self):
        if ( self.__filename and self.__ft_flag is True ) :
         if np.any(self.__selection_setted):
@@ -294,18 +307,18 @@ class Data:
            self.__dataplt = analysis.notch(self.__dataplt, notch_range)
            self.plotstd()
         else:
-           print('WARNING: no selection, aborting filtering') 
+           print('WARNING: no selection, aborting filtering')
            self.printer.append('WARNING: no selection, aborting filtering')
 
 
-    
-    def raw_data(self): 
+
+    def raw_data(self):
       if self.__filename :
-        self.__freq = None             
+        self.__freq = None
         self.__ft_flag = False
-        self.resetZoom(False) 
+        self.resetZoom(False)
         self.__dataplt = np.copy(self.__data)
-        self.__time = np.copy(self.__raw_time) 
+        self.__time = np.copy(self.__raw_time)
         self.__axis = self.__time
         #self.__actual2d = 0
         self.plotstd()
@@ -332,7 +345,7 @@ class Data:
         phaserange = self.getSelectionRange(self.__axis, self.__selection_setted)
         if point2d is None:
                 point2d = self.__actual2d
-        self.__dataplt, phase = analysis.autophase(self.__dataplt, phaserange, 
+        self.__dataplt, phase = analysis.autophase(self.__dataplt, phaserange,
                                 point2d, self.__1d_indip_phase)
         self.printer.append('Phase correction (degrees): '+str(phase))
         self.plotstd()
@@ -343,8 +356,8 @@ class Data:
        if np.any(self.__selection_setted):
          int_range = self.getSelectionRange(self.__axis, self.__selection_setted)
          integrals, magnitude_integral = analysis.integrate(self.__dataplt, int_range, self.__scans, self.__actual_scans)
-         print(integrals)
-         print('self.__delay_tables_si',self.__delay_tables_si)
+        #  print(integrals)
+        #  print('self.__delay_tables_si',self.__delay_tables_si)
          if self.__delay_tables_si:
           table = self.__delay_tables_si[self.__actual_delay]
           if table.size != integrals.size:
@@ -358,81 +371,80 @@ class Data:
          int_list, outcome = utils.export_ints(integrals, magnitude_integral, table, self.__filename)
          self.printer.append('Integrals:\n' + int_list)
          self.printer.append(outcome)
+         return integrals, magnitude_integral
        else:
-         print('WARNING: no selection, aborting integration') 
+         print('WARNING: no selection, aborting integration')
          self.printer.append('WARNING no selection, aborting integration')
-         
-         
+
+
     def echo_find(self, check = False):
        if self.__filename and not self.__ft_flag:
         self.bl_correction(False)
-        peak_limits = analysis.echoFind(self.__dataplt, self.__axis)
+        peak_limits = analysis.echoFind(self.__dataplt, self.__axis,self.__threshold)
         self.setSelection(peak_limits[0], peak_limits[1])
         if check is True:
            return peak_limits[2] # return 2d point maximmum
         self.plotstd()
        elif self.__ft_flag:
-        self.printer.append('This function only works in time domain!!!') 
+        self.printer.append('This function only works in time domain!!!')
 
     def bc_phcorr_int(self):
        if self.__filename and np.any(self.__selection_setted) :
         self.bl_correction(False)
         self.auto_phase()
-        self.integrate()
+        integral, magnitude_integral = self.integrate()
+        return integral, magnitude_integral
        else:
         self.printer.append('WARNING no selection, aborting')
+
 
     def find_phcorr_int(self):
        if self.__filename and not self.__ft_flag:
         point2d = self.echo_find(True) #find and get 2d point maximum
         self.auto_phase(point2d)
-        self.integrate()
+        integral, magnitude_integral = self.integrate()
        elif self.__ft_flag:
         self.printer.append('This function only works in time domain!!!')
        else:
         self.printer.append('WARNING no selection, aborting')
+       return integral, magnitude_integral
 
     def left_shift(self, check):
        if self.__filename and self.__LeftShift:
          if check is True:
                 self.bl_correction(False)
-         self.__dataplt = analysis.leftshift(self.__dataplt, self.__LeftShift,check) 
+         self.__dataplt = analysis.leftshift(self.__dataplt, self.__LeftShift,check)
          self.printer.append('Shifted: '+ str(self.__LeftShift))
          self.plotstd()
 
     def zerofill(self):
        if self.__filename and not self.__ft_flag:
-          self.__dataplt, self.__time = analysis.zerofill(self.__dataplt, self.__time) 
+          self.__dataplt, self.__time = analysis.zerofill(self.__dataplt, self.__time)
           self.__axis = self.__time
           self.plotstd()
 
     def exp_apodization(self):
        if self.__filename and not self.__ft_flag:
           # remember time[1] is equal to the dwell time
-          self.__dataplt = analysis.exp_apodization(self.__dataplt, self.__time[1],self.__LB) 
+          self.__dataplt = analysis.exp_apodization(self.__dataplt, self.__time[1],self.__LB)
           self.plotstd()
 
     def sqr_apodization(self):
        if self.__filename and self.__SqrShift and not self.__ft_flag:
           if not self.__ft_flag:  self.bl_correction(False)
-          self.__dataplt = analysis.sqr_apodization(self.__dataplt, self.__SqrShift) 
+          self.__dataplt = analysis.sqr_apodization(self.__dataplt, self.__SqrShift)
           self.plotstd()
 
-    def load_script(self):
-       if self.__filename:
-          with open("script.py") as f:
-            code = compile(f.read(), "script.py", 'exec')
-            exec(code)
-          
+
     def reloader(self):
-        if self.__filename: self.loader(self.__filename)    
+        if self.__filename: self.loader(self.__filename)
 
 # TO DO:
 # export and baseline correction actions DONE
 # 2D support DONE
 # selection (zoom) DONE
-# delay tables DONE 
-# phase correction DONE 
+# delay tables DONE
+# phase correction DONE
 # auto phase DONE
 # integrals DONE
 # logging improved DONE
@@ -443,11 +455,8 @@ class Data:
 # zero fill DONE
 # set auto echo-find sensisitivity
 # reload DONE
-# export save 
+# export save NEEDed??
 # auto select table DONE (automatically on file load, can be improved)
-# !!!adapt table
+# !!!adapt table DONE?
 # autoscale on off
 # !!!load scripts
-
-
-

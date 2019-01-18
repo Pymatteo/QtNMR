@@ -8,61 +8,73 @@ import modules.embededpy as embededpy
 import modules.qrc_resources
 
 
+
+
 class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-        
+
         ######## Window parameters and recent files ###############
         self.MaxRecentFiles = 10
         self.recentFileActs = []
-        
+
         settings = QtCore.QSettings()
         self.recentFiles = settings.value("RecentFiles")
 #        print(self.recentFiles)
-        
+
         size = settings.value("MainWindow/Size", QtCore.QVariant(QtCore.QSize(800, 600)))
-        
+
         self.resize(size)
         position = settings.value("MainWindow/Position", QtCore.QVariant(QtCore.QPoint(0, 0)))
         self.move(position)
-        
+
+        ####################################################
+        # timer setup
+        ####################################################
+        self.scriptimer= QtCore.QTimer()
+
         ####################################################
         ####################################################
 
-        self.myQWidget = graphics.Widgetmain()       
+        self.myQWidget = graphics.Widgetmain()
         #self.dirty = False
-        
+        self.lastscript = None
+        self.continous_script_on = False
+
         self.dat = dataclass.Data(self.myQWidget, self.loadFile)
-        
+
+        # default timer interval
+        self.dat.setTimerInterval(15000)
+
         self.sizeLabel = QtWidgets.QLabel()
         self.sizeLabel.setFrameStyle(QtWidgets.QFrame.StyledPanel|QtWidgets.QFrame.Sunken)
         self.status = self.statusBar()
         # create a set to resize point in the right corner when true
-        self.status.setSizeGripEnabled(False) 
-        
+        self.status.setSizeGripEnabled(False)
+
         # adds sizelabel to the status bar
         #status.addPermanentWidget(self.sizeLabel)
-        
+
         # shows a default message in the status bar
         self.status.showMessage("Ready")
-        
+
         self.messageView = QtWidgets.QTextBrowser()
-        
+
         self.myQWidget.setStatus(self.status)
         self.mainSplitter = QtWidgets.QSplitter(QtCore.Qt.Vertical)
-        
+
         self.mainSplitter.addWidget(self.myQWidget)
         self.mainSplitter.addWidget(self.messageView)
-        
+
         self.setCentralWidget(self.mainSplitter)
-        
+
         self.mainSplitter.setStretchFactor(0, 1)
-        self.mainSplitter.setStretchFactor(1, 1)      
-        
-        self.dat.setPrinter(self.messageView) 
+        self.mainSplitter.setStretchFactor(1, 1)
+
+        self.dat.setPrinter(self.messageView)
         self.messageView.append('QtNMR - Log:')
-        
+
         fileToolbar = self.addToolBar('FileT')
         plotToolbar = self.addToolBar('PlotT')
         plotToolbar.setObjectName("PlotToolBar")
@@ -73,97 +85,97 @@ class MainWindow(QtWidgets.QMainWindow):
         scriptsMenu = self.menuBar().addMenu('&Scripts')
         optionsMenu = self.menuBar().addMenu('&Options')
         viewMenu = self.menuBar().addMenu('&View')
-        
+
         #self.fileMenu.aboutToShow.connect(self.updateWindowMenu)
-        
+
         # ACTIONS DEFINITIONS
 
         ### recent files ####
         for i in range(self.MaxRecentFiles):
-            self.recentFileActs.append(QtWidgets.QAction(self, visible=False, 
-                                        triggered=self.openRecentFile))                    
+            self.recentFileActs.append(QtWidgets.QAction(self, visible=False,
+                                        triggered=self.openRecentFile))
         ######################
-        
+
         fileOpenAction = self.createAction("&Open...", self.fileOpen,
                 QtGui.QKeySequence.Open, ":/fileopen.png",
                 "Open an existing tnt file")
 
         fileQuitAction = self.createAction("&Quit", self.close,
                 QtGui.QKeySequence("Ctrl+Q"), None, "Close the application")
-                
+
         fullScreenViewAction = self.createAction("&Full Screen", self.fscreen,
                 QtGui.QKeySequence("F11"), None,
-                "Full Screen") 
-        
+                "Full Screen")
+
         self.fourierTransformAction = self.createAction("&Fourier Transform", self.fourier,
                 QtGui.QKeySequence("Ctrl+F"), ":/frequency.png",
-                "Fourier Transform", True)  
+                "Fourier Transform", True)
 
         fourierTransformAction_nobc = self.createAction("Fourier Transform &no baseline correction", self.fourier_no_bc,
-                None, None, "Fourier Transform no baseline correction", True)     
+                None, None, "Fourier Transform no baseline correction", True)
 
         baselineAction = self.createAction("&Baseline correction", self.baseline,
                 QtGui.QKeySequence("Ctrl+B"), ":/bc.png",
-                "Baseline correction")  
+                "Baseline correction")
 
         exportAction = self.createAction("&Fast export", self.export,
                 QtGui.QKeySequence("Ctrl+E"), None,
-                "Fast export dataset")  
-                
+                "Fast export dataset")
+
         inverseTransformAction = self.createAction("&Inverse Fourier Transform", self.inv_fourier,
                 None, ":/timedomain.png",
-                "Inverse Fourier Transform")            
-        
+                "Inverse Fourier Transform")
+
         rawDataAction = self.createAction("&Back to Raw Data", self.raw_data,
-                None, ":/rawdata.png", "Back to Raw Data") 
+                None, ":/rawdata.png", "Back to Raw Data")
 
         reloadAction = self.createAction("&Reload", self.reloader,
-                QtGui.QKeySequence("F12"), ":/reload-icon.png", "Reload File") 
+                QtGui.QKeySequence("F12"), ":/reload-icon.png", "Reload File")
 
         autoPhaseAction = self.createAction("&Auto Phase", self.autophase,
                 QtGui.QKeySequence("Ctrl+P"), ":/autophase.png",
-                "Auto phase adjustment")  
-        
+                "Auto phase adjustment")
+
         integrateAction = self.createAction("In&tegrate selection", self.integrate,
                 QtGui.QKeySequence("Ctrl+I"), ":/integrate.png",
-                "Integrate selection (selected table)")  
+                "Integrate selection (selected table)")
 
         savePlotAction = self.createAction("&Export Plot", self.export_plot,
                 None, ":/exportPlot.png",
-                "Export plot (.eps, .png ...)")  
+                "Export plot (.eps, .png ...)")
 
         configurePlotAction = self.createAction("&Customize Plot", self.axis_conf,
                 None, ":/customAx.png",
-                "Customize actual plot")  
+                "Customize actual plot")
 
         indipendentPhaseAction = self.createAction("Independent &Autophase", self.phase1d,
                 None, None,
-                "Phase 1D points indipendently", True) 
+                "Phase 1D points indipendently", True)
 
         saveSelectionAction = self.createAction("&Save Selection", self.save_selection,
                 QtGui.QKeySequence("F5"), None,
-                "Save Selection") 
+                "Save Selection")
 
         loadSelectionAction = self.createAction("&Load Selection", self.load_selection,
                 QtGui.QKeySequence("F6"), None,
-                "Load Selection") 
-                
+                "Load Selection")
+
         findEchoAction = self.createAction("Find &Echo", self.echo_find,
                 None, None,
-                "Auto find echo")  
+                "Auto find echo")
 
         bc_phc_intAction = self.createAction("BC + PC + Integrate", self.bc_phc_int,
                 QtGui.QKeySequence("F2"), ":/phase-int.png",
-                "Baseline Corr. + Autophase + Integrate and save")  
-                
+                "Baseline Corr. + Autophase + Integrate and save")
+
         find_phc_intAction = self.createAction("FE + PC + Integrate", self.find_phc_int,
                 QtGui.QKeySequence("F1"), ":/find-int.png",
-                "Find Echo + Baseline Corr. + Autophase + Integrate and save")   
+                "Find Echo + Baseline Corr. + Autophase + Integrate and save")
 
         leftshiftAction = self.createAction("Left shift", self.leftshift,
                 QtGui.QKeySequence("F7"), None,
-                "Left shift")   
-      
+                "Left shift")
+
         rollshiftAction = self.createAction("Left shift - Roll", self.rollshift,
                 QtGui.QKeySequence("Ctrl+R"), None,
                 "Left shift - Data rolled to back")
@@ -175,36 +187,44 @@ class MainWindow(QtWidgets.QMainWindow):
         expApodAction = self.createAction("Exp. Apodization", self.exp_apodization,
                 QtGui.QKeySequence("F9"), None,
                 "Exponential Apodization")
-        
+
         sqrApodAction = self.createAction("Square Apodization", self.sqr_apodization,
                 QtGui.QKeySequence("Ctrl+1"), None,
-                "Square Apodization")        
-                
+                "Square Apodization")
+
         nextFileAction = self.createAction("&Next File", self.nextfile,
                 QtGui.QKeySequence("F4"), ":/nextfile.png",
-                "Load Next File")   
-                
+                "Load Next File")
+
         prevFileAction = self.createAction("&Previous File", self.prevfile,
                 QtGui.QKeySequence("F3"), ":/prevfile.png",
-                "Load Previous File")  
-                
-        runScriptAction = self.createAction("&Run Script", self.load_script,
+                "Load Previous File")
+
+        runScriptAction = self.createAction("&Run Script", self.scriptOpen,
+                None, None,
+                "Run Script")
+
+        runLastScrAction = self.createAction("&Run Most Recent Script", self.run_last_script,
                 QtGui.QKeySequence("F10"), None,
-                "Run Script") 
-                
+                "Run Most Recent Script")
+
         prefAction = self.createAction("&Preferences...", self.pref,
                 None, None,
                 "Preferences")
-        
+
         embedpyAction = self.createAction("&Python console", self.embedpy,
                 QtGui.QKeySequence("Ctrl+T"), None,
-                "Embeded IPython terminal")                                     
-        
+                "Embeded IPython terminal")
+
         bandStopAction = self.createAction("&Band Stop Filter", self.notch,
                 QtGui.QKeySequence("Ctrl+N"), None,
-                "Band Stop Filter")        
+                "Band Stop Filter")
 
-        #import actions to windows   
+        continuousScriptAction = self.createAction("&Continous Run Script", self.contscript,
+                None, None,
+                "Re-run script every few seconds (set in Preferences)", True)
+
+        #import actions to windows
         self.addAction(fileOpenAction)
         self.addAction(exportAction)
         self.addAction(fileQuitAction)
@@ -230,13 +250,15 @@ class MainWindow(QtWidgets.QMainWindow):
         self.addAction(nextFileAction)
         self.addAction(prevFileAction)
         self.addAction(runScriptAction)
+        self.addAction(runLastScrAction)
         self.addAction(prefAction)
         self.addAction(embedpyAction)
         self.addAction(reloadAction)
         self.addAction(bandStopAction)
-        
-        
-        #import actions to widgets   
+        self.addAction(continuousScriptAction)
+
+
+        #import actions to widgets
         self.fileMenu.addAction(fileOpenAction)
         self.fileMenu.addAction(nextFileAction)
         self.fileMenu.addAction(prevFileAction)
@@ -246,7 +268,7 @@ class MainWindow(QtWidgets.QMainWindow):
         ### recent files ###############
         for i in range(self.MaxRecentFiles):
             self.fileMenu.addAction(self.recentFileActs[i])
-        
+
         self.separatorAct = self.fileMenu.addSeparator()
         #################################
         self.fileMenu.addAction(fileQuitAction)
@@ -270,17 +292,19 @@ class MainWindow(QtWidgets.QMainWindow):
 
         toolsMenu.addAction(findEchoAction)
         toolsMenu.addAction(leftshiftAction)
-        toolsMenu.addAction(rollshiftAction)   
+        toolsMenu.addAction(rollshiftAction)
         toolsMenu.addAction(zerofillAction)
         toolsMenu.addSeparator()
         toolsMenu.addAction(saveSelectionAction)
         toolsMenu.addAction(loadSelectionAction)
-        
+
         optionsMenu.addAction(indipendentPhaseAction)
         optionsMenu.addAction(prefAction)
-        
+
         scriptsMenu.addAction(runScriptAction)
+        scriptsMenu.addAction(runLastScrAction)
         scriptsMenu.addAction(embedpyAction)
+        scriptsMenu.addAction(continuousScriptAction)
 
         fileToolbar.addAction(fileOpenAction)
         fileToolbar.addAction(prevFileAction)
@@ -297,7 +321,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         plotToolbar.addAction(savePlotAction)
         plotToolbar.addAction(configurePlotAction)
-        
+
         # spinboxes and other stuff
         self.pointSpinBox = QtWidgets.QSpinBox()
         self.pointSpinBox.setWrapping(True)
@@ -320,7 +344,7 @@ class MainWindow(QtWidgets.QMainWindow):
         for widget in QtWidgets.QApplication.topLevelWidgets():
             if isinstance(widget, MainWindow):
                 widget.updateRecentFileActions()
-    
+
     def fourier(self):
         self.dat.fourier(True)
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
@@ -338,17 +362,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def export(self):
         self.dat.export()
-        
+
     def inv_fourier(self):
-        self.dat.inv_fourier() 
+        self.dat.inv_fourier()
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
 
-    def reloader(self): 
+    def reloader(self):
         self.dat.reloader()
         self.pointSpinBox.setValue(1)
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
-                
-    def raw_data(self): 
+
+    def raw_data(self):
         self.dat.raw_data()
         #self.pointSpinBox.setValue(1)
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
@@ -358,8 +382,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def set_1d_indip(self):
         self.dat.auto_phase()
-        
-    def integrate(self):   
+
+    def integrate(self):
         self.dat.integrate()
 
     def export_plot(self):
@@ -376,13 +400,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def load_selection(self):
         self.dat.loadSaved()
-        
+
     def echo_find(self):
         self.dat.echo_find()
 
     def bc_phc_int(self):
         self.dat.bc_phcorr_int()
-        
+
     def find_phc_int(self):
         self.dat.find_phcorr_int()
 
@@ -394,41 +418,77 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def zerofill(self):
         self.dat.zerofill()
-        
+
     def notch(self):
-        self.dat.notch()    
+        self.dat.notch()
 
     def exp_apodization(self):
         self.dat.exp_apodization()
-        
+
     def sqr_apodization(self):
-        self.dat.sqr_apodization() 
-        
+        self.dat.sqr_apodization()
+
     def nextfile(self):
         if self.dat.getFilename() is not None :
             self.loadFile(utils.fileroll(self.dat.getFilename()[0],+1))
-            
+
     def prevfile(self):
         if self.dat.getFilename() is not None :
-            self.loadFile(utils.fileroll(self.dat.getFilename()[0],-1))       
-            
-    def load_script(self):
-        self.dat.load_script() 
-        
+            self.loadFile(utils.fileroll(self.dat.getFilename()[0],-1))
+
+    def scriptOpen(self):
+        #if not self.okToContinue():
+        #    return
+        dir = (os.path.dirname(self.dat.getFilename()[0])
+              if self.dat.getFilename() is not None else ".")
+        fname = QtWidgets.QFileDialog.getOpenFileName(self,
+               "QtNMR - Load Script", dir, '*.py')
+        if fname[0] :
+            self.lastscript = fname[0]
+            self.load_script(fname[0])
+
+    def run_script(self, scriptname):
+              f=open(scriptname)
+              code = compile(f.read(), scriptname, 'exec')
+              exec(code)
+
+    def load_script(self, scriptname=None):
+        if scriptname:
+           if not self.continous_script_on:
+              self.run_script(scriptname)
+           else:
+              self.run_script(scriptname)
+              print("autoon")
+
+
+    def run_last_script(self):
+        print('continous_script')
+        if self.lastscript:
+            self.load_script(self.lastscript)
+
+    def contscript(self):
+        self.continous_script_on = not self.continous_script_on
+        if self.continous_script_on:
+             self.scriptimer.timeout.connect(self.run_last_script)
+             self.scriptimer.start(self.dat.getTimerInterval())
+        else:
+             self.scriptimer.stop()
+
+
     def pref(self):
-      if self.dat.getFilename() is not None : 
+      if self.dat.getFilename() is not None :
         dialog = prefdialog.prefDlg(parent=self, data=self.dat)
         dialog.show()
         if dialog.exec_():
            print(dialog.result())
         else:
            print(dialog.nonaccpted())
-           
-    def embedpy(self):       
+
+    def embedpy(self):
         dialog = embededpy.IpythonWidget(parent=self, data=self.dat)
         dialog.show()
-        
-    
+
+
     @QtCore.pyqtSlot(int)
     def select2D(self,delaypoint):
         self.dat.select2d(delaypoint)
@@ -444,12 +504,12 @@ class MainWindow(QtWidgets.QMainWindow):
         dir = (os.path.dirname(self.dat.getFilename()[0])
                if self.dat.getFilename() is not None else ".")
         fname = QtWidgets.QFileDialog.getOpenFileName(self,
-                "QtNMR - Open", dir, '*.tnt')              
+                "QtNMR - Open", dir, '*.tnt')
         if fname[0] :
-            self.loadFile(fname) 
-          
-            
-    def loadFile(self, loadfname=None):  
+            self.loadFile(fname)
+
+
+    def loadFile(self, loadfname=None):
         self.dat.loadFile(loadfname)
         self.fourierTransformAction.setChecked(self.dat.getFtFlag())
         self.setWindowTitle('QtNMR - ' + self.dat.getFilename()[0].split('/')[-1])
@@ -481,6 +541,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 widget.updateRecentFileActions()
 
 
+
     def updateRecentFileActions(self):
         settings = QtCore.QSettings()
         files = settings.value('recentFileList', [])
@@ -497,7 +558,7 @@ class MainWindow(QtWidgets.QMainWindow):
             self.recentFileActs[j].setVisible(False)
 
         self.separatorAct.setVisible((numRecentFiles > 0))
-    
+
     def strippedName(self, fullFileName):
         return QtCore.QFileInfo(fullFileName).fileName()
 
@@ -505,7 +566,7 @@ class MainWindow(QtWidgets.QMainWindow):
         action = self.sender()
         if action:
           if os.path.exists(action.data()):
-            self.loadFile((action.data(),'*.tnt'))     
+            self.loadFile((action.data(),'*.tnt'))
 
     #full screen
     def fscreen(self):
@@ -513,8 +574,8 @@ class MainWindow(QtWidgets.QMainWindow):
             self.showNormal()
         else:
             self.showFullScreen()
-            
-    #createaction function see above    
+
+    #createaction function see above
     def createAction(self, text, slot=None, shortcut=None, icon=None,
                      tip=None, checkable=False):
         action = QtWidgets.QAction(text, self)
@@ -528,10 +589,7 @@ class MainWindow(QtWidgets.QMainWindow):
             action.setToolTip(tip)
             action.setStatusTip(tip)
         if slot is not None:
-            action.triggered.connect(slot) 
+            action.triggered.connect(slot)
         if checkable:
             action.setCheckable(True)
-        return action   
-    
-    
-            
+        return action

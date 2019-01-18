@@ -1,0 +1,35 @@
+providers: [
+  {
+    key: "bt"
+    config:
+      commands: [
+        {
+          project: "/home/matteo/Dropbox/pyqt/qtnmr/new"
+          source: "/home/matteo/Dropbox/pyqt/qtnmr/new/.build-tools.cson"
+          name: "qtnmr-run"
+          command: "python3 qtnmr.py"
+          wd: "."
+          env: {}
+          modifier: {}
+          environment:
+            name: "child_process"
+            config:
+              stdoe: "both"
+          stdout:
+            pipeline: []
+          stderr:
+            pipeline: []
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              colors: false
+              stdin: false
+            linter:
+              no_trace: false
+              immediate: false
+          version: 2
+        }
+      ]
+  }
+]

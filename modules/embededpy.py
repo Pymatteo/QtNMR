@@ -16,14 +16,17 @@ class dummyStream:
         def close(self): pass
         # and now redirect all default streams to this dummyStream:
 
-# uncomment the following to cxfreeze 
-       
-#sys.stdout = dummyStream()
-#sys.stderr = dummyStream()
-#sys.stdin = dummyStream()
-#sys.__stdout__ = dummyStream()
-#sys.__stderr__ = dummyStream()
-#sys.__stdin__ = dummyStream()
+# uncomment the following to cxfreeze
+
+# sys.stdout = dummyStream()
+# sys.stderr = dummyStream()
+# sys.stdin = dummyStream()
+# sys.__stdout__ = dummyStream()
+# sys.__stderr__ = dummyStream()
+# sys.__stdin__ = dummyStream()
+
+
+#######################################################
 
 os.environ['QT_API'] = 'pyqt5'
 os.environ['PYZMQ_BACKEND'] = 'cython'
@@ -48,9 +51,9 @@ def new_load_qt(api_options):
 
     return QtCore, QtGuiCompat, QtSvg, 'pyqt5'
 
-from qtconsole import  qt_loaders   
+from qtconsole import  qt_loaders
 
-qt_loaders.load_qt = new_load_qt 
+qt_loaders.load_qt = new_load_qt
 
 #####################################
 ##### HACK END #######################
@@ -74,7 +77,7 @@ class QIPythonWidget(RichJupyterWidget):
         def stop():
             kernel_client.stop_channels()
             kernel_manager.shutdown_kernel()
-            self.widgetrunning.close()          
+            self.widgetrunning.close()
         self.exit_requested.connect(stop)
 
     def pushVariables(self,variableDict):
@@ -82,44 +85,43 @@ class QIPythonWidget(RichJupyterWidget):
         self.kernel_manager.kernel.shell.push(variableDict)
     def clearTerminal(self):
         """ Clears the terminal """
-        self._control.clear()    
+        self._control.clear()
     def printText(self,text):
         """ Prints some plain text to the console """
-        self._append_plain_text(text)        
+        self._append_plain_text(text)
     def executeCommand(self,command):
         """ Execute a command in the frame of the console widget """
         self._execute(command,False)
 
 
 class IpythonWidget(QtWidgets.QMainWindow):
-# Main GUI dialog forIPython Console widget 
+# Main GUI dialog forIPython Console widget
     def __init__(self, parent=None, data=None):
         super(IpythonWidget, self).__init__(parent)
-        
+
         self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
 
         self.data = data
-        
+
         self.setWindowTitle('QtNMR embedded IPython console')
-        
+
         self.centralWidget = QtWidgets.QWidget()
-        
+
         self.setCentralWidget(self.centralWidget)
-        
+
         layout = QtWidgets.QVBoxLayout()
 
         self.ipyConsole = QIPythonWidget(self, customBanner="Welcome to the QtNMR embedded IPython console\n")
-     
-        layout.addWidget(self.ipyConsole) 
-        self.centralWidget.setLayout(layout)       
+
+        layout.addWidget(self.ipyConsole)
+        self.centralWidget.setLayout(layout)
         # This allows the variable foo and method print_process_id to be accessed from the ipython console
         self.ipyConsole.pushVariables({"data":data})
-        
 
-    
+
+
 if __name__ == '__main__':
     app  = QtWidgets.QApplication(sys.argv)
     self.widget = IpythonWidget()
     self.widget.show()
     app.exec_()
-

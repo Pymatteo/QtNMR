@@ -1,7 +1,7 @@
 import modules.utils as utils
 import numpy as np
-# import scipy.fftpack as sc 
-import numpy.fft as sc 
+# import scipy.fftpack as sc
+import numpy.fft as sc
 import re
 
 
@@ -22,30 +22,30 @@ def fourier(data, time):
         freq = np.concatenate((freq[freq.size/2:] , freq[:freq.size/2]))
         fftdata  = sc.fft(data, None, axis=-1)
         fftdata = np.concatenate((fftdata[:, npts/2:] , fftdata[:,:npts/2]), axis=-1)
-        # frequencies are reversed in ntnmr so we have to flip! 
+        # frequencies are reversed in ntnmr so we have to flip!
         fftdata = np.fliplr(fftdata)
         return (fftdata/np.sqrt(npts)), freq
 
-        
-def invfourier(data): 
+
+def invfourier(data):
         npts = data.shape[-1]
         data *= np.sqrt(npts)
         data = np.fliplr(data)
-        data = sc.ifft(np.concatenate((data[:, npts/2:] , 
-                                  data[:,:npts/2]), axis=-1))  
+        data = sc.ifft(np.concatenate((data[:, npts/2:] ,
+                                  data[:,:npts/2]), axis=-1))
         return data
 
 def phase(data, angle):
     # angle is in degree change to radians
-    angle = angle / 360 * 2 * np.pi 
-    phased = data * np.exp(-1j * angle) 
+    angle = angle / 360 * 2 * np.pi
+    phased = data * np.exp(-1j * angle)
     return phased, angle * 360 / (2 * np.pi)
-  
+
 
 def autophase(data, selection, actual2d, indipendent1d=False):
      if indipendent1d is False:
         if np.any(selection):
-           selected_range = data[actual2d, selection[0]:selection[1]]  
+           selected_range = data[actual2d, selection[0]:selection[1]]
         else:
            selected_range = data[actual2d,:]
         phased = data * np.exp(-1j * np.angle(np.sum(selected_range)))
@@ -56,14 +56,14 @@ def autophase(data, selection, actual2d, indipendent1d=False):
            selected_range = data[:,selection[0]:selection[1]]
         else:
            selected_range = data
-        for point in range(data.shape[0]): 
+        for point in range(data.shape[0]):
            angle = np.angle(np.sum(selected_range[point,:]))
-           phi.append(angle * 360 / (2 * np.pi))            
+           phi.append(angle * 360 / (2 * np.pi))
            data[point,:] =  data[point,:] * np.exp(-1j * angle)
-        phased = data       
+        phased = data
      return phased, phi
 
-        
+
 def integrate(data, selection, scans, actual_scans):
         selected_range = data[:, selection[0]:selection[1]]
         integrals = np.sum(selected_range, axis=-1)
@@ -74,19 +74,19 @@ def integrate(data, selection, scans, actual_scans):
         magnitude_int[-1] = magnitude_int[-1] / actual_scans * scans
         print("magn: ",magnitude_int[-1])
         return integrals/scans, magnitude_int/scans
-        
 
-def echoFind(dat, xaxis):
+
+def echoFind(dat, xaxis,threshold):
         # switch to magnitude
-        data = np.absolute(dat) 
+        data = np.absolute(dat)
         # biggest value in data (magnitude)
-        peak = np.amax(data) 
+        peak = np.amax(data)
         #find peak position (can be more than one even if unlikely)
-        peak_pos = np.where(data == peak) 
+        peak_pos = np.where(data == peak)
         # keep just first position
         peakXY = peak_pos[0][0], peak_pos[1][0]
         npts = data.shape[-1]
-        t = np.mean(data[peakXY[0],int(npts / -8):])*4 #threshold
+        t = np.mean(data[peakXY[0],int(npts / -8):])*threshold #threshold
         ii = jj = 0
         while (data[peakXY[0], peakXY[1]+ii] > t) or ((data[peakXY[0], peakXY[1]-jj] > t) and (peakXY[1]-jj > 8)):
           if (peakXY[1]-jj > 8):
@@ -100,7 +100,7 @@ def echoFind(dat, xaxis):
 def leftshift(data, shifter, check):
         data = np.roll(data, -shifter, axis=-1)
         if check is True:
-                data[:,-shifter:] = 0       
+                data[:,-shifter:] = 0
         return data
 
 
@@ -116,7 +116,7 @@ def exp_apodization(data, dwell, LB):
         LBdw = -LB * dwell * np.pi
         data = data * np.exp(LBdw * np.arange(npts, dtype=float))
         return data
-        
+
 
 def sqr_apodization(data, cutter):
         npts = data.shape[-1]
@@ -128,4 +128,3 @@ def sqr_apodization(data, cutter):
 def notch(data, selection):
         data[:, selection[0]:selection[1]] = data[:, selection[0]:selection[1]] - data[:, selection[0]:selection[1]]/20
         return data
-      

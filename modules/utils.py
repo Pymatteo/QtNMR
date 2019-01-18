@@ -67,7 +67,7 @@ def read_string(data, number_type='<i4', encoding='ascii'):
     number_size = number_type.itemsize
     text = data[number_size:number_size + length]
     return text
-    
+
 
 def export(actual,data,xaxis,fft_flag,filename):
     if (filename):
@@ -79,51 +79,55 @@ def export(actual,data,xaxis,fft_flag,filename):
         fw.write(ax + ' real '+ 'imag\n')
         #print(xaxis) check if axis type is right
         for ii in range(data[actual,:].size):
-            fw.write('{0:.7f} {1:.3f} {2:.3f}\n'.format(xaxis[ii], 
+            fw.write('{0:.7f} {1:.3f} {2:.3f}\n'.format(xaxis[ii],
             data[actual,:].real[ii], data[actual,:].imag[ii]))
-        fw.close() 
+        fw.close()
         outcome = 'exported as: ' + filename[0].rsplit('.',1)[0]+'.txt'
-        print(outcome)    
+        print(outcome)
 
 
 def export_ints(integrals, magnitude, table,filename):
     if (filename):
         s = io.StringIO()
-        fw = open(filename[0].rsplit('.',1)[0]+'_ints.dat', 'w') 
+        fw = open(filename[0].rsplit('.',1)[0]+'_ints.dat', 'w')
         fw.write('delay\t' + 'real\t'+ 'imag\t'+'magnitude\n')
         s.write('delay\t' + 'real\t'+ 'imag\t'+'magnitude\n')
-        
+
         for ii in range(integrals.size):
-                fw.write('{0:.7f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\n'.format(table[ii], 
+                fw.write('{0:.7f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\n'.format(table[ii],
                 integrals.real[ii], integrals.imag[ii], magnitude[ii]))
-                s.write('{0:.2e}\t{1:.2e}\t{2:.2e}\t{3:.2e}\n'.format(table[ii], 
+                s.write('{0:.2e}\t{1:.2e}\t{2:.2e}\t{3:.2e}\n'.format(table[ii],
                 integrals.real[ii], integrals.imag[ii], magnitude[ii]))
-                
-        fw.close() 
+
+        fw.close()
         stringints = s.getvalue()
         s.close()
         outcome = 'integrals exported as: ' + filename[0].rsplit('.',1)[0]+'_ints.dat'
-        return stringints, outcome  
-        
+        return stringints, outcome
 
-def fileroll(filename, move):
+
+def filelist(filename):
     folder = filename.rsplit('/',1)[0]
     folder_files = sorted(glob.glob(folder + '/*.tnt'))
     folder_files = [n.replace("\\", "/") for n in folder_files[:]]
-    
+
+    return folder_files
+
+
+
+def fileroll(filename, move):
+
+    folder_files=filelist(filename)
+
     if filename in folder_files :
         index = folder_files.index(filename)
     else:
         index = sorted(folder_files + [filename]).index(filename)
-        
+
     if 0 <= index+move <= len(folder_files)-1:
         filetoload = folder_files[index+move]
     elif index+move < 0:
         filetoload = folder_files[-1]
     else:
-        filetoload = folder_files[0]    
+        filetoload = folder_files[0]
     return (filetoload, '*.tnt')
-    
-    
-    
-
